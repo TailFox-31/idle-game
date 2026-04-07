@@ -4,7 +4,7 @@
 
 - Unity 프로젝트
 - 현재는 초기 부트스트랩 단계
-- Unity 프로젝트 파일이 아직 전부 커밋되지 않았을 수 있음
+- Unity 초기 프로젝트 파일이 이미 Git에 반영된 상태
 
 ## 작업 원칙
 
@@ -42,4 +42,3 @@
 
 - `README.md` 한 줄 추가
 - `Assets/Scripts/SmokeTest.cs` 같은 작은 파일 추가
-
