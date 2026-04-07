@@ -15,8 +15,8 @@
 
 ## Unity 버전
 
-- 초기 프로젝트 생성에 사용한 Unity 버전을 사용
-- 프로젝트 파일이 올라오면 `ProjectSettings/ProjectVersion.txt`를 기준으로 문서를 갱신
+- `6000.4.1f1`
+- 기준 파일: `ProjectSettings/ProjectVersion.txt`
 
 ## Git 규칙
 
