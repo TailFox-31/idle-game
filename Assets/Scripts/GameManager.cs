@@ -89,10 +89,10 @@ namespace IdleGame
         private int milestoneWaveInterval = 5;
 
         [SerializeField, Min(0)]
-        private int milestoneGoldReward = 20;
+        private int milestoneGoldReward = 30;
 
         [SerializeField, Min(0)]
-        private int milestoneGoldRewardPerMilestone = 10;
+        private int milestoneGoldRewardPerMilestone = 15;
 
         [SerializeField, Min(0)]
         private int milestoneAttackPowerPerMilestone = 1;
@@ -100,10 +100,10 @@ namespace IdleGame
         [SerializeField]
         private List<UpgradeDefinition> upgrades = new()
         {
-            new UpgradeDefinition(UpgradeTrack.AttackPower, 10, 1.35f, attackPowerPerLevel: 1),
-            new UpgradeDefinition(UpgradeTrack.MaxHealth, 16, 1.45f, maxHealthPerLevel: 8),
-            new UpgradeDefinition(UpgradeTrack.Defense, 18, 1.5f, flatDamageReductionPerLevel: 1),
-            new UpgradeDefinition(UpgradeTrack.AttackSpeed, 24, 1.6f, attackSpeedPerLevel: 0.15f),
+            new UpgradeDefinition(UpgradeTrack.AttackPower, 10, 1.28f, attackPowerPerLevel: 1),
+            new UpgradeDefinition(UpgradeTrack.MaxHealth, 14, 1.34f, maxHealthPerLevel: 10),
+            new UpgradeDefinition(UpgradeTrack.Defense, 16, 1.38f, flatDamageReductionPerLevel: 1),
+            new UpgradeDefinition(UpgradeTrack.AttackSpeed, 20, 1.42f, attackSpeedPerLevel: 0.12f),
         };
 
         private readonly Dictionary<UpgradeTrack, UpgradeState> upgradeStates = new();
@@ -251,10 +251,10 @@ namespace IdleGame
         {
             return new List<UpgradeDefinition>
             {
-                new UpgradeDefinition(UpgradeTrack.AttackPower, 10, 1.35f, attackPowerPerLevel: 1),
-                new UpgradeDefinition(UpgradeTrack.MaxHealth, 16, 1.45f, maxHealthPerLevel: 8),
-                new UpgradeDefinition(UpgradeTrack.Defense, 18, 1.5f, flatDamageReductionPerLevel: 1),
-                new UpgradeDefinition(UpgradeTrack.AttackSpeed, 24, 1.6f, attackSpeedPerLevel: 0.15f),
+                new UpgradeDefinition(UpgradeTrack.AttackPower, 10, 1.28f, attackPowerPerLevel: 1),
+                new UpgradeDefinition(UpgradeTrack.MaxHealth, 14, 1.34f, maxHealthPerLevel: 10),
+                new UpgradeDefinition(UpgradeTrack.Defense, 16, 1.38f, flatDamageReductionPerLevel: 1),
+                new UpgradeDefinition(UpgradeTrack.AttackSpeed, 20, 1.42f, attackSpeedPerLevel: 0.12f),
             };
         }
 
@@ -329,26 +329,7 @@ namespace IdleGame
 
         private void TryGrantMilestoneReward(int reachedWave)
         {
-            var milestoneWave = GetReachedMilestoneWave(reachedWave);
-            if (milestoneWave <= lastClaimedMilestoneWave)
-            {
-                return;
-            }
-
-            var milestoneIndex = milestoneWave / Mathf.Max(2, milestoneWaveInterval);
-            var goldReward = milestoneGoldReward + (milestoneGoldRewardPerMilestone * Mathf.Max(0, milestoneIndex - 1));
-            var attackReward = milestoneAttackPowerPerMilestone;
-
-            lastClaimedMilestoneWave = milestoneWave;
-            lastMilestoneGoldReward = Mathf.Max(0, goldReward);
-            lastMilestoneAttackReward = Mathf.Max(0, attackReward);
-            gold += lastMilestoneGoldReward;
-            milestoneAttackBonus += lastMilestoneAttackReward;
-
-            if (lastMilestoneAttackReward > 0)
-            {
-                battleSystem?.SetPlayerStats(BuildPlayerStats());
-            }
+            GrantMilestonesUpToWave(reachedWave);
         }
 
         private int GetReachedMilestoneWave(int wave)
@@ -369,6 +350,63 @@ namespace IdleGame
             var remainder = normalizedWave % interval;
             return remainder == 0 ? normalizedWave : normalizedWave + (interval - remainder);
         }
+
+        private void GrantMilestonesUpToWave(int reachedWave)
+        {
+            var milestoneWave = GetReachedMilestoneWave(reachedWave);
+            if (milestoneWave <= lastClaimedMilestoneWave)
+            {
+                return;
+            }
+
+            var interval = Mathf.Max(2, milestoneWaveInterval);
+            var attackRewardGranted = false;
+
+            for (var wave = lastClaimedMilestoneWave + interval; wave <= milestoneWave; wave += interval)
+            {
+                var milestoneIndex = wave / interval;
+                var goldReward = milestoneGoldReward + (milestoneGoldRewardPerMilestone * Mathf.Max(0, milestoneIndex - 1));
+                var attackReward = milestoneAttackPowerPerMilestone;
+
+                lastClaimedMilestoneWave = wave;
+                lastMilestoneGoldReward = Mathf.Max(0, goldReward);
+                lastMilestoneAttackReward = Mathf.Max(0, attackReward);
+                gold += lastMilestoneGoldReward;
+                milestoneAttackBonus += lastMilestoneAttackReward;
+                attackRewardGranted |= lastMilestoneAttackReward > 0;
+            }
+
+            if (attackRewardGranted)
+            {
+                battleSystem?.SetPlayerStats(BuildPlayerStats());
+            }
+        }
+
+#if UNITY_EDITOR
+        public void EditorGrantGold(int amount)
+        {
+            gold += Mathf.Max(0, amount);
+            PublishState();
+        }
+
+        public void EditorJumpToNextMilestone()
+        {
+            EditorJumpToWave(GetNextMilestoneWave(currentWave + 1));
+        }
+
+        public void EditorJumpToWave(int targetWave)
+        {
+            if (enemyController == null || battleSystem == null)
+            {
+                return;
+            }
+
+            currentWave = Mathf.Max(1, targetWave);
+            GrantMilestonesUpToWave(currentWave);
+            battleSystem.SetEnemy(enemyController.CreateSpawnDataForWave(currentWave));
+            PublishState();
+        }
+#endif
 
         private void PublishState()
         {

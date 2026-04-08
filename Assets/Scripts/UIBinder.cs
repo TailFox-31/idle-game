@@ -43,6 +43,10 @@ namespace IdleGame
 
         private GameManager gameManager;
 
+#if UNITY_EDITOR
+        private string editorJumpWaveText = "20";
+#endif
+
         public void Bind(GameManager target)
         {
             Unbind();
@@ -91,6 +95,43 @@ namespace IdleGame
         {
             Unbind();
         }
+
+#if UNITY_EDITOR
+        private void OnGUI()
+        {
+            if (gameManager == null)
+            {
+                return;
+            }
+
+            GUILayout.BeginArea(new Rect(20f, 340f, 230f, 180f), "EDITOR DEBUG", GUI.skin.window);
+            GUILayout.Label("Prototype-only wave tools");
+
+            if (GUILayout.Button("+100 Gold"))
+            {
+                gameManager.EditorGrantGold(100);
+            }
+
+            if (GUILayout.Button("Next Milestone"))
+            {
+                gameManager.EditorJumpToNextMilestone();
+            }
+
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("Wave", GUILayout.Width(42f));
+            editorJumpWaveText = GUILayout.TextField(editorJumpWaveText, GUILayout.Width(52f));
+            if (GUILayout.Button("Jump"))
+            {
+                if (int.TryParse(editorJumpWaveText, out var targetWave))
+                {
+                    gameManager.EditorJumpToWave(targetWave);
+                }
+            }
+
+            GUILayout.EndHorizontal();
+            GUILayout.EndArea();
+        }
+#endif
 
         private void Refresh(GameSnapshot snapshot)
         {
