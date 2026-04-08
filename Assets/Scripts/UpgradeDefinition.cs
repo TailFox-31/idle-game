@@ -62,8 +62,8 @@ namespace IdleGame
 
             return track switch
             {
-                UpgradeTrack.AttackPower => stats.With(attackPower: stats.AttackPower + (attackPowerPerLevel * level)),
-                UpgradeTrack.AttackSpeed => stats.With(attacksPerSecond: stats.AttacksPerSecond + (attackSpeedPerLevel * level)),
+                UpgradeTrack.AttackPower => stats.Add(attackPower: attackPowerPerLevel * level),
+                UpgradeTrack.AttackSpeed => stats.Add(attacksPerSecond: attackSpeedPerLevel * level),
                 _ => stats,
             };
         }

@@ -74,21 +74,23 @@ namespace IdleGame
         {
             if (goldText != null)
             {
-                goldText.text = $"Gold: {snapshot.Gold} | Wave {snapshot.Wave}";
+                goldText.text = snapshot.LastMilestoneWave > 0
+                    ? $"Gold {snapshot.Gold} | W{snapshot.Wave} | Next {snapshot.NextMilestoneWave} | Last {snapshot.LastMilestoneWave} +{snapshot.LastMilestoneGoldReward}g/+{snapshot.LastMilestoneAttackReward}ATK"
+                    : $"Gold {snapshot.Gold} | W{snapshot.Wave} | Next {snapshot.NextMilestoneWave}";
             }
 
             if (playerStatsText != null)
             {
                 playerStatsText.text = snapshot.Battle.PlayerAlive
-                    ? $"HP {snapshot.Battle.PlayerHealth}/{snapshot.Battle.PlayerMaxHealth} | ATK {snapshot.PlayerStats.AttackPower} | SPD {snapshot.PlayerStats.AttacksPerSecond:0.00}"
-                    : $"HP 0/{snapshot.Battle.PlayerMaxHealth} | Defeated ({snapshot.Battle.PlayerRespawnRemaining:0.0}s) | ATK {snapshot.PlayerStats.AttackPower} | SPD {snapshot.PlayerStats.AttacksPerSecond:0.00}";
+                    ? $"HP {snapshot.Battle.PlayerHealth}/{snapshot.Battle.PlayerMaxHealth} | ATK {snapshot.PlayerStats.AttackPower} | SPD {snapshot.PlayerStats.AttacksPerSecond:0.00} | M+{snapshot.MilestoneAttackBonus} ATK"
+                    : $"HP 0/{snapshot.Battle.PlayerMaxHealth} | Down {snapshot.Battle.PlayerRespawnRemaining:0.0}s | ATK {snapshot.PlayerStats.AttackPower} | M+{snapshot.MilestoneAttackBonus}";
             }
 
             if (enemyText != null)
             {
                 enemyText.text = snapshot.Battle.EnemyAlive
-                    ? $"Wave {snapshot.Battle.Wave} {snapshot.Battle.EnemyId} HP {snapshot.Battle.EnemyHealth}/{snapshot.Battle.EnemyMaxHealth} | ATK {snapshot.Battle.EnemyAttackPower} | SPD {snapshot.Battle.EnemyAttacksPerSecond:0.00} | Gold {snapshot.Battle.EnemyGoldReward}"
-                    : $"Wave {snapshot.Battle.Wave} {snapshot.Battle.EnemyId} in {snapshot.Battle.EnemyRespawnRemaining:0.0}s | HP {snapshot.Battle.EnemyMaxHealth} | ATK {snapshot.Battle.EnemyAttackPower} | SPD {snapshot.Battle.EnemyAttacksPerSecond:0.00} | Gold {snapshot.Battle.EnemyGoldReward}";
+                    ? $"W{snapshot.Battle.Wave} {snapshot.Battle.EnemyId} {snapshot.Battle.EnemyHealth}/{snapshot.Battle.EnemyMaxHealth}HP | {snapshot.Battle.EnemyAttackPower}ATK {snapshot.Battle.EnemyAttacksPerSecond:0.00}SPD | {snapshot.Battle.EnemyGoldReward}g"
+                    : $"W{snapshot.Battle.Wave} {snapshot.Battle.EnemyId} respawn {snapshot.Battle.EnemyRespawnRemaining:0.0}s | {snapshot.Battle.EnemyAttackPower}ATK {snapshot.Battle.EnemyAttacksPerSecond:0.00}SPD | {snapshot.Battle.EnemyGoldReward}g";
             }
 
             RefreshUpgradeButton(snapshot, UpgradeTrack.AttackPower, attackPowerButton, attackPowerButtonText);

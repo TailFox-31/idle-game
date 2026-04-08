@@ -37,6 +37,14 @@ namespace IdleGame
                 attackPower ?? AttackPower,
                 attacksPerSecond ?? AttacksPerSecond);
         }
+
+        public CombatantStats Add(int maxHealth = 0, int attackPower = 0, float attacksPerSecond = 0f)
+        {
+            return new CombatantStats(
+                MaxHealth + maxHealth,
+                AttackPower + attackPower,
+                AttacksPerSecond + attacksPerSecond);
+        }
     }
 
     public sealed class CombatantRuntime
