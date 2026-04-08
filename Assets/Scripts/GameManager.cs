@@ -121,6 +121,7 @@ namespace IdleGame
         private void Awake()
         {
             gold = Mathf.Max(0, startingGold);
+            EnsureUpgradeDefinitions();
             InitializeUpgradeStates();
             InitializeBattleSystem();
 
@@ -130,6 +131,11 @@ namespace IdleGame
             }
 
             PublishState();
+        }
+
+        private void OnValidate()
+        {
+            EnsureUpgradeDefinitions();
         }
 
         private void Update()
@@ -167,6 +173,78 @@ namespace IdleGame
 
                 upgradeStates.Add(definition.Track, new UpgradeState(definition));
             }
+        }
+
+        private void EnsureUpgradeDefinitions()
+        {
+            if (HasExpectedUpgradeTracks(upgrades))
+            {
+                return;
+            }
+
+            upgrades = BuildDefaultUpgradeDefinitions();
+        }
+
+        private static bool HasExpectedUpgradeTracks(List<UpgradeDefinition> definitions)
+        {
+            if (definitions == null || definitions.Count != 3)
+            {
+                return false;
+            }
+
+            var seenAttackPower = false;
+            var seenMaxHealth = false;
+            var seenAttackSpeed = false;
+
+            foreach (var definition in definitions)
+            {
+                if (definition == null)
+                {
+                    return false;
+                }
+
+                switch (definition.Track)
+                {
+                    case UpgradeTrack.AttackPower:
+                        if (seenAttackPower)
+                        {
+                            return false;
+                        }
+
+                        seenAttackPower = true;
+                        break;
+                    case UpgradeTrack.MaxHealth:
+                        if (seenMaxHealth)
+                        {
+                            return false;
+                        }
+
+                        seenMaxHealth = true;
+                        break;
+                    case UpgradeTrack.AttackSpeed:
+                        if (seenAttackSpeed)
+                        {
+                            return false;
+                        }
+
+                        seenAttackSpeed = true;
+                        break;
+                    default:
+                        return false;
+                }
+            }
+
+            return seenAttackPower && seenMaxHealth && seenAttackSpeed;
+        }
+
+        private static List<UpgradeDefinition> BuildDefaultUpgradeDefinitions()
+        {
+            return new List<UpgradeDefinition>
+            {
+                new UpgradeDefinition(UpgradeTrack.AttackPower, 10, 1.35f, attackPowerPerLevel: 1),
+                new UpgradeDefinition(UpgradeTrack.MaxHealth, 15, 1.45f, maxHealthPerLevel: 8),
+                new UpgradeDefinition(UpgradeTrack.AttackSpeed, 20, 1.6f, attackSpeedPerLevel: 0.15f),
+            };
         }
 
         private void InitializeBattleSystem()
