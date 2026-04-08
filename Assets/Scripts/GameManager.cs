@@ -53,6 +53,9 @@ namespace IdleGame
         [SerializeField]
         private UIBinder uiBinder;
 
+        [SerializeField, Min(0f)]
+        private float playerRespawnDelay = 2f;
+
         [SerializeField]
         private List<UpgradeDefinition> upgrades = new()
         {
@@ -126,7 +129,7 @@ namespace IdleGame
                 return;
             }
 
-            battleSystem = new AutoBattleSystem(BuildPlayerStats(), enemyController.CreateSpawnData());
+            battleSystem = new AutoBattleSystem(BuildPlayerStats(), enemyController.CreateSpawnData(), playerRespawnDelay);
             battleSystem.GoldAwarded += HandleGoldAwarded;
             battleSystem.BattleStateChanged += _ => PublishState();
         }
@@ -153,7 +156,7 @@ namespace IdleGame
 
             var battle = battleSystem != null
                 ? battleSystem.Snapshot
-                : new BattleSnapshot(string.Empty, 0, 0, 0, false, 0f);
+                : new BattleSnapshot(string.Empty, 0, 0, false, 0f, 0, 0, false, 0f);
 
             return new GameSnapshot(gold, BuildPlayerStats(), battle, upgradeData);
         }
