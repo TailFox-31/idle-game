@@ -22,15 +22,18 @@ namespace IdleGame
 
     public readonly struct GameSnapshot
     {
-        public GameSnapshot(int gold, CombatantStats playerStats, BattleSnapshot battle, UpgradeViewData[] upgrades)
+        public GameSnapshot(int gold, int wave, CombatantStats playerStats, BattleSnapshot battle, UpgradeViewData[] upgrades)
         {
             Gold = gold;
+            Wave = wave;
             PlayerStats = playerStats;
             Battle = battle;
             Upgrades = upgrades;
         }
 
         public int Gold { get; }
+
+        public int Wave { get; }
 
         public CombatantStats PlayerStats { get; }
 
@@ -66,6 +69,7 @@ namespace IdleGame
         private readonly Dictionary<UpgradeTrack, UpgradeState> upgradeStates = new();
         private AutoBattleSystem battleSystem;
         private int gold;
+        private int currentWave = 1;
 
         public event Action<GameSnapshot> StateChanged;
 
@@ -129,8 +133,9 @@ namespace IdleGame
                 return;
             }
 
-            battleSystem = new AutoBattleSystem(BuildPlayerStats(), enemyController.CreateSpawnData(), playerRespawnDelay);
+            battleSystem = new AutoBattleSystem(BuildPlayerStats(), enemyController.CreateSpawnDataForWave(currentWave), playerRespawnDelay);
             battleSystem.GoldAwarded += HandleGoldAwarded;
+            battleSystem.EnemyDefeated += HandleEnemyDefeated;
             battleSystem.BattleStateChanged += _ => PublishState();
         }
 
@@ -156,14 +161,26 @@ namespace IdleGame
 
             var battle = battleSystem != null
                 ? battleSystem.Snapshot
-                : new BattleSnapshot(string.Empty, 0, 0, false, 0f, 0, 0, false, 0f);
+                : new BattleSnapshot(0, string.Empty, 0, 0, false, 0f, 0, 0, 0, 0f, 0, false, 0f);
 
-            return new GameSnapshot(gold, BuildPlayerStats(), battle, upgradeData);
+            return new GameSnapshot(gold, currentWave, BuildPlayerStats(), battle, upgradeData);
         }
 
         private void HandleGoldAwarded(int amount)
         {
             gold += Mathf.Max(0, amount);
+            PublishState();
+        }
+
+        private void HandleEnemyDefeated(EnemySpawnData defeatedEnemy)
+        {
+            if (enemyController == null)
+            {
+                return;
+            }
+
+            currentWave = Mathf.Max(currentWave, defeatedEnemy.Wave) + 1;
+            battleSystem?.QueueEnemy(enemyController.CreateSpawnDataForWave(currentWave));
             PublishState();
         }
 
