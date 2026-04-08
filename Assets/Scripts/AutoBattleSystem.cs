@@ -5,13 +5,14 @@ namespace IdleGame
 {
     public readonly struct EnemySpawnData
     {
-        public EnemySpawnData(int wave, string enemyId, CombatantStats stats, int goldReward, float respawnDelay)
+        public EnemySpawnData(int wave, string enemyId, CombatantStats stats, int goldReward, float respawnDelay, string behaviorLabel)
         {
             Wave = Mathf.Max(1, wave);
             EnemyId = enemyId;
             Stats = stats;
             GoldReward = Mathf.Max(0, goldReward);
             RespawnDelay = Mathf.Max(0f, respawnDelay);
+            BehaviorLabel = string.IsNullOrWhiteSpace(behaviorLabel) ? string.Empty : behaviorLabel.Trim();
         }
 
         public int Wave { get; }
@@ -23,6 +24,8 @@ namespace IdleGame
         public int GoldReward { get; }
 
         public float RespawnDelay { get; }
+
+        public string BehaviorLabel { get; }
     }
 
     public readonly struct BattleSnapshot
@@ -39,6 +42,7 @@ namespace IdleGame
             int enemyAttackPower,
             float enemyAttacksPerSecond,
             int enemyGoldReward,
+            string enemyBehaviorLabel,
             bool enemyAlive,
             float enemyRespawnRemaining)
         {
@@ -53,6 +57,7 @@ namespace IdleGame
             EnemyAttackPower = enemyAttackPower;
             EnemyAttacksPerSecond = enemyAttacksPerSecond;
             EnemyGoldReward = enemyGoldReward;
+            EnemyBehaviorLabel = enemyBehaviorLabel;
             EnemyAlive = enemyAlive;
             EnemyRespawnRemaining = enemyRespawnRemaining;
         }
@@ -80,6 +85,8 @@ namespace IdleGame
         public float EnemyAttacksPerSecond { get; }
 
         public int EnemyGoldReward { get; }
+
+        public string EnemyBehaviorLabel { get; }
 
         public bool EnemyAlive { get; }
 
@@ -119,10 +126,7 @@ namespace IdleGame
             {
                 var missingHealth = Mathf.Max(0, player.Stats.MaxHealth - player.CurrentHealth);
                 player.SetStats(playerStats);
-                if (missingHealth > 0)
-                {
-                    player.ReceiveDamage(missingHealth);
-                }
+                player.SetCurrentHealth(player.Stats.MaxHealth - missingHealth);
             }
             else
             {
@@ -249,6 +253,7 @@ namespace IdleGame
                 displayedEnemy.Stats.AttackPower,
                 displayedEnemy.Stats.AttacksPerSecond,
                 displayedEnemy.GoldReward,
+                displayedEnemy.BehaviorLabel,
                 enemy.IsAlive,
                 enemyRespawnRemaining);
         }
