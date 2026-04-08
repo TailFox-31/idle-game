@@ -23,6 +23,7 @@ public static class IdleGamePrototypeSceneBuilder
     private const string AttackSpeedButtonName = "AttackSpeedUpgradeButton";
     private const string DefenseButtonName = "DefenseUpgradeButton";
     private const string MaxHealthButtonName = "MaxHealthUpgradeButton";
+    private const string GoldGainButtonName = "GoldGainUpgradeButton";
     private const string ResetSaveButtonName = "ResetSaveButton";
     private const string LabelChildName = "Label";
     private const string GameManagerName = "GameManager";
@@ -68,6 +69,7 @@ public static class IdleGamePrototypeSceneBuilder
         var maxHealthButton = EnsureButton(upgradesPanel, MaxHealthButtonName, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, -74f), "Health Lv.0 (16g)");
         var defenseButton = EnsureButton(upgradesPanel, DefenseButtonName, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, -148f), "Defense Lv.0 (18g)");
         var attackSpeedButton = EnsureButton(upgradesPanel, AttackSpeedButtonName, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, -222f), "Speed Lv.0 (24g)");
+        var goldGainButton = EnsureButton(upgradesPanel, GoldGainButtonName, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, -296f), "Gold Lv.0 (24g)");
 
         EnsureEventSystem(scene);
 
@@ -81,7 +83,7 @@ public static class IdleGamePrototypeSceneBuilder
         var uiBinder = EnsureComponent<UIBinder>(uiBinderObject);
 
         WireGameManager(gameManager, enemyController, uiBinder);
-        WireUiBinder(uiBinder, goldReadout, playerStatsReadout, enemyStatusReadout, attackPowerButton, maxHealthButton, defenseButton, attackSpeedButton, resetSaveButton);
+        WireUiBinder(uiBinder, goldReadout, playerStatsReadout, enemyStatusReadout, attackPowerButton, maxHealthButton, defenseButton, attackSpeedButton, goldGainButton, resetSaveButton);
 
         EditorSceneManager.MarkSceneDirty(scene);
         Selection.activeGameObject = systemsRoot;
@@ -167,6 +169,7 @@ public static class IdleGamePrototypeSceneBuilder
         Button maxHealthButton,
         Button defenseButton,
         Button attackSpeedButton,
+        Button goldGainButton,
         Button resetSaveButton)
     {
         var serializedObject = new SerializedObject(uiBinder);
@@ -181,6 +184,8 @@ public static class IdleGamePrototypeSceneBuilder
         SetObjectReference(serializedObject, "defenseButtonText", GetButtonLabel(defenseButton));
         SetObjectReference(serializedObject, "attackSpeedButton", attackSpeedButton);
         SetObjectReference(serializedObject, "attackSpeedButtonText", GetButtonLabel(attackSpeedButton));
+        SetObjectReference(serializedObject, "goldGainButton", goldGainButton);
+        SetObjectReference(serializedObject, "goldGainButtonText", GetButtonLabel(goldGainButton));
         SetObjectReference(serializedObject, "resetSaveButton", resetSaveButton);
         serializedObject.ApplyModifiedPropertiesWithoutUndo();
         EditorUtility.SetDirty(uiBinder);
@@ -305,7 +310,7 @@ public static class IdleGamePrototypeSceneBuilder
         rectTransform.anchorMax = new Vector2(0f, 0f);
         rectTransform.pivot = new Vector2(0f, 0f);
         rectTransform.anchoredPosition = new Vector2(20f, 20f);
-        rectTransform.sizeDelta = new Vector2(340f, 300f);
+        rectTransform.sizeDelta = new Vector2(340f, 374f);
     }
 
     private static void StretchToParent(RectTransform rectTransform)

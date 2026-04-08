@@ -9,6 +9,7 @@ namespace IdleGame
         MaxHealth = 1,
         Defense = 2,
         AttackSpeed = 3,
+        GoldGain = 4,
     }
 
     [Serializable]
@@ -35,6 +36,9 @@ namespace IdleGame
         [SerializeField, Min(0)]
         private int flatDamageReductionPerLevel = 1;
 
+        [SerializeField, Min(0f)]
+        private float goldGainMultiplierPerLevel = 0f;
+
         public UpgradeDefinition()
         {
         }
@@ -46,7 +50,8 @@ namespace IdleGame
             int attackPowerPerLevel = 0,
             int maxHealthPerLevel = 0,
             float attackSpeedPerLevel = 0f,
-            int flatDamageReductionPerLevel = 0)
+            int flatDamageReductionPerLevel = 0,
+            float goldGainMultiplierPerLevel = 0f)
         {
             this.track = track;
             this.startingCost = Mathf.Max(1, startingCost);
@@ -55,6 +60,7 @@ namespace IdleGame
             this.maxHealthPerLevel = Mathf.Max(0, maxHealthPerLevel);
             this.attackSpeedPerLevel = Mathf.Max(0f, attackSpeedPerLevel);
             this.flatDamageReductionPerLevel = Mathf.Max(0, flatDamageReductionPerLevel);
+            this.goldGainMultiplierPerLevel = Mathf.Max(0f, goldGainMultiplierPerLevel);
         }
 
         public UpgradeTrack Track => track;
@@ -63,6 +69,16 @@ namespace IdleGame
         {
             var scaled = startingCost * Mathf.Pow(costMultiplier, Mathf.Max(0, currentLevel));
             return Mathf.Max(1, Mathf.CeilToInt(scaled));
+        }
+
+        public float GetGoldGainMultiplier(int level)
+        {
+            if (level <= 0 || track != UpgradeTrack.GoldGain)
+            {
+                return 1f;
+            }
+
+            return Mathf.Max(1f, 1f + (goldGainMultiplierPerLevel * level));
         }
 
         public CombatantStats Apply(CombatantStats stats, int level)
@@ -78,6 +94,7 @@ namespace IdleGame
                 UpgradeTrack.MaxHealth => stats.Add(maxHealth: maxHealthPerLevel * level),
                 UpgradeTrack.Defense => stats.Add(flatDamageReduction: flatDamageReductionPerLevel * level),
                 UpgradeTrack.AttackSpeed => stats.Add(attacksPerSecond: attackSpeedPerLevel * level),
+                UpgradeTrack.GoldGain => stats,
                 _ => stats,
             };
         }

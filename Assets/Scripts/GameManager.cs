@@ -125,6 +125,7 @@ namespace IdleGame
             new UpgradeDefinition(UpgradeTrack.MaxHealth, 14, 1.34f, maxHealthPerLevel: 10),
             new UpgradeDefinition(UpgradeTrack.Defense, 16, 1.38f, flatDamageReductionPerLevel: 1),
             new UpgradeDefinition(UpgradeTrack.AttackSpeed, 20, 1.42f, attackSpeedPerLevel: 0.12f),
+            new UpgradeDefinition(UpgradeTrack.GoldGain, 24, 1.48f, goldGainMultiplierPerLevel: 0.12f),
         };
 
         private readonly Dictionary<UpgradeTrack, UpgradeState> upgradeStates = new();
@@ -239,15 +240,7 @@ namespace IdleGame
                 return;
             }
 
-            foreach (var entry in saveData.upgrades)
-            {
-                if (entry == null || !upgradeStates.TryGetValue(entry.track, out var state))
-                {
-                    continue;
-                }
-
-                state.SetLevel(entry.level);
-            }
+            LoadUpgradeLevels(saveData.upgrades);
         }
 
         private void ApplyFreshState()
@@ -277,7 +270,7 @@ namespace IdleGame
 
         private static bool HasExpectedUpgradeTracks(List<UpgradeDefinition> definitions)
         {
-            if (definitions == null || definitions.Count != 4)
+            if (definitions == null || definitions.Count != 5)
             {
                 return false;
             }
@@ -286,6 +279,7 @@ namespace IdleGame
             var seenMaxHealth = false;
             var seenDefense = false;
             var seenAttackSpeed = false;
+            var seenGoldGain = false;
 
             foreach (var definition in definitions)
             {
@@ -328,12 +322,20 @@ namespace IdleGame
 
                         seenAttackSpeed = true;
                         break;
+                    case UpgradeTrack.GoldGain:
+                        if (seenGoldGain)
+                        {
+                            return false;
+                        }
+
+                        seenGoldGain = true;
+                        break;
                     default:
                         return false;
                 }
             }
 
-            return seenAttackPower && seenMaxHealth && seenDefense && seenAttackSpeed;
+            return seenAttackPower && seenMaxHealth && seenDefense && seenAttackSpeed && seenGoldGain;
         }
 
         private static List<UpgradeDefinition> BuildDefaultUpgradeDefinitions()
@@ -344,6 +346,7 @@ namespace IdleGame
                 new UpgradeDefinition(UpgradeTrack.MaxHealth, 14, 1.34f, maxHealthPerLevel: 10),
                 new UpgradeDefinition(UpgradeTrack.Defense, 16, 1.38f, flatDamageReductionPerLevel: 1),
                 new UpgradeDefinition(UpgradeTrack.AttackSpeed, 20, 1.42f, attackSpeedPerLevel: 0.12f),
+                new UpgradeDefinition(UpgradeTrack.GoldGain, 24, 1.48f, goldGainMultiplierPerLevel: 0.12f),
             };
         }
 
@@ -416,9 +419,48 @@ namespace IdleGame
 
         private void HandleGoldAwarded(int amount)
         {
-            gold += Mathf.Max(0, amount);
+            gold += GetModifiedGoldReward(amount);
             SaveProgress();
             PublishState();
+        }
+
+        private void LoadUpgradeLevels(List<UpgradeSaveData> savedUpgrades)
+        {
+            foreach (var state in upgradeStates.Values)
+            {
+                state.SetLevel(0);
+            }
+
+            foreach (var entry in savedUpgrades)
+            {
+                if (entry == null || !upgradeStates.TryGetValue(entry.track, out var state))
+                {
+                    continue;
+                }
+
+                state.SetLevel(entry.level);
+            }
+        }
+
+        private int GetModifiedGoldReward(int baseAmount)
+        {
+            var normalizedAmount = Mathf.Max(0, baseAmount);
+            if (normalizedAmount <= 0)
+            {
+                return 0;
+            }
+
+            return Mathf.Max(1, Mathf.RoundToInt(normalizedAmount * GetGoldGainMultiplier()));
+        }
+
+        private float GetGoldGainMultiplier()
+        {
+            if (!upgradeStates.TryGetValue(UpgradeTrack.GoldGain, out var state))
+            {
+                return 1f;
+            }
+
+            return state.Definition.GetGoldGainMultiplier(state.Level);
         }
 
         private void HandleEnemyDefeated(EnemySpawnData defeatedEnemy)

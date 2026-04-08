@@ -41,6 +41,12 @@ namespace IdleGame
         [SerializeField]
         private TMP_Text maxHealthButtonText;
 
+        [SerializeField]
+        private Button goldGainButton;
+
+        [SerializeField]
+        private TMP_Text goldGainButtonText;
+
         [Header("Meta")]
         [SerializeField]
         private Button resetSaveButton;
@@ -84,6 +90,11 @@ namespace IdleGame
         public void RequestMaxHealthUpgrade()
         {
             gameManager?.TryPurchaseUpgrade(UpgradeTrack.MaxHealth);
+        }
+
+        public void RequestGoldGainUpgrade()
+        {
+            gameManager?.TryPurchaseUpgrade(UpgradeTrack.GoldGain);
         }
 
         public void RequestResetSave()
@@ -178,6 +189,7 @@ namespace IdleGame
             RefreshUpgradeButton(snapshot, UpgradeTrack.AttackSpeed, attackSpeedButton, attackSpeedButtonText);
             RefreshUpgradeButton(snapshot, UpgradeTrack.Defense, defenseButton, defenseButtonText);
             RefreshUpgradeButton(snapshot, UpgradeTrack.MaxHealth, maxHealthButton, maxHealthButtonText);
+            RefreshUpgradeButton(snapshot, UpgradeTrack.GoldGain, goldGainButton, goldGainButtonText);
         }
 
         private static UpgradeViewData? GetUpgradeViewData(GameSnapshot snapshot, UpgradeTrack track)
@@ -230,6 +242,11 @@ namespace IdleGame
                 maxHealthButton.onClick.AddListener(RequestMaxHealthUpgrade);
             }
 
+            if (goldGainButton != null)
+            {
+                goldGainButton.onClick.AddListener(RequestGoldGainUpgrade);
+            }
+
             if (resetSaveButton != null)
             {
                 resetSaveButton.onClick.AddListener(RequestResetSave);
@@ -256,6 +273,11 @@ namespace IdleGame
             if (maxHealthButton != null)
             {
                 maxHealthButton.onClick.RemoveListener(RequestMaxHealthUpgrade);
+            }
+
+            if (goldGainButton != null)
+            {
+                goldGainButton.onClick.RemoveListener(RequestGoldGainUpgrade);
             }
 
             if (resetSaveButton != null)
@@ -354,6 +376,7 @@ namespace IdleGame
                 UpgradeTrack.MaxHealth => "Health",
                 UpgradeTrack.Defense => "Defense",
                 UpgradeTrack.AttackSpeed => "Speed",
+                UpgradeTrack.GoldGain => "Gold",
                 _ => track.ToString(),
             };
         }
