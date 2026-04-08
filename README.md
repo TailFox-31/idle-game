@@ -52,3 +52,4 @@ ProjectSettings/
 
 - 씬, 프리팹, 대형 바이너리 수정은 초반 smoke 단계에서는 피하는 편이 안전함
 - 원격 작업 규칙은 `AGENTS.md` 참고
+Idle-game PR smoke retry.
