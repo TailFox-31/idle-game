@@ -68,13 +68,13 @@ public static class IdleGamePrototypeSceneBuilder
         resetSaveButton.GetComponent<Image>().color = new Color32(122, 54, 54, 220);
         var waveTravelPanel = EnsureChildRectTransform(headerPanel, WaveTravelPanelName);
         ConfigureWaveTravelPanel(waveTravelPanel);
-        var startWaveReadout = EnsureReadout(waveTravelPanel, StartWaveReadoutName, new Vector2(0f, 1f), new Vector2(1f, 1f), Vector2.zero, "Start W1 / Max W1");
+        var startWaveReadout = EnsureReadout(waveTravelPanel, StartWaveReadoutName, new Vector2(0f, 1f), new Vector2(1f, 1f), Vector2.zero, "Current W1 | Start W1 | Max W1");
         startWaveReadout.rectTransform.sizeDelta = new Vector2(360f, 30f);
         startWaveReadout.alignment = TextAlignmentOptions.MidlineRight;
         startWaveReadout.fontSize = 22f;
-        var previousWaveButton = EnsureButton(waveTravelPanel, PreviousWaveButtonName, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, -42f), "Prev", new Vector2(108f, 44f), 20f);
-        var nextWaveButton = EnsureButton(waveTravelPanel, NextWaveButtonName, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(124f, -42f), "Next", new Vector2(108f, 44f), 20f);
-        var travelButton = EnsureButton(waveTravelPanel, TravelButtonName, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(248f, -42f), "Travel", new Vector2(112f, 44f), 20f);
+        var previousWaveButton = EnsureButton(waveTravelPanel, PreviousWaveButtonName, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, -42f), "Prev", new Vector2(84f, 44f), 20f);
+        var nextWaveButton = EnsureButton(waveTravelPanel, NextWaveButtonName, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(92f, -42f), "Next", new Vector2(84f, 44f), 20f);
+        var travelButton = EnsureButton(waveTravelPanel, TravelButtonName, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(184f, -42f), "Travel to W1", new Vector2(176f, 44f), 18f);
 
         var upgradesPanel = EnsureChildRectTransform(uiRoot, UpgradesPanelName);
         ConfigureUpgradePanel(upgradesPanel);
@@ -198,6 +198,7 @@ public static class IdleGamePrototypeSceneBuilder
         SetObjectReference(serializedObject, "previousWaveButton", previousWaveButton);
         SetObjectReference(serializedObject, "nextWaveButton", nextWaveButton);
         SetObjectReference(serializedObject, "travelButton", travelButton);
+        SetObjectReference(serializedObject, "travelButtonText", GetButtonLabel(travelButton));
         SetObjectReference(serializedObject, "attackPowerButton", attackPowerButton);
         SetObjectReference(serializedObject, "attackPowerButtonText", GetButtonLabel(attackPowerButton));
         SetObjectReference(serializedObject, "maxHealthButton", maxHealthButton);

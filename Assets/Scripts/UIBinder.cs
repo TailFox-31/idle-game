@@ -64,6 +64,9 @@ namespace IdleGame
         [SerializeField]
         private Button travelButton;
 
+        [SerializeField]
+        private TMP_Text travelButtonText;
+
         private bool ownsRuntimeResetButton;
         private bool ownsRuntimeWaveTravelControls;
         private GameManager gameManager;
@@ -220,7 +223,7 @@ namespace IdleGame
 
             if (startWaveText != null)
             {
-                startWaveText.text = $"Start W{snapshot.SelectedStartWave} / Max W{snapshot.HighestWaveReached}";
+                startWaveText.text = BuildWaveTravelReadout(snapshot);
             }
 
             RefreshUpgradeButton(snapshot, UpgradeTrack.AttackPower, attackPowerButton, attackPowerButtonText);
@@ -241,7 +244,14 @@ namespace IdleGame
 
             if (travelButton != null)
             {
-                travelButton.interactable = snapshot.SelectedStartWave != snapshot.Wave;
+                var canTravel = snapshot.SelectedStartWave != snapshot.Wave;
+                travelButton.interactable = canTravel;
+                if (travelButtonText != null)
+                {
+                    travelButtonText.text = canTravel
+                        ? $"Travel to W{snapshot.SelectedStartWave}"
+                        : $"At W{snapshot.Wave}";
+                }
             }
         }
 
@@ -438,6 +448,11 @@ namespace IdleGame
 
         private void EnsureWaveTravelControls()
         {
+            if (travelButtonText == null && travelButton != null)
+            {
+                travelButtonText = GetButtonLabel(travelButton);
+            }
+
             if ((startWaveText != null && previousWaveButton != null && nextWaveButton != null && travelButton != null) || enemyText == null)
             {
                 return;
@@ -459,10 +474,11 @@ namespace IdleGame
             panelRect.sizeDelta = new Vector2(360f, 96f);
             panelRect.anchoredPosition = new Vector2(-20f, -122f);
 
-            startWaveText = CreateTravelLabel(panelRect, "StartWaveLabel", "Start W1 / Max W1");
-            previousWaveButton = CreateTravelButton(panelRect, "PrevWaveButton", new Vector2(0f, -42f), new Vector2(108f, 44f), "Prev");
-            nextWaveButton = CreateTravelButton(panelRect, "NextWaveButton", new Vector2(124f, -42f), new Vector2(108f, 44f), "Next");
-            travelButton = CreateTravelButton(panelRect, "TravelWaveButton", new Vector2(248f, -42f), new Vector2(112f, 44f), "Travel");
+            startWaveText = CreateTravelLabel(panelRect, "StartWaveLabel", "Current W1 | Start W1 | Max W1");
+            previousWaveButton = CreateTravelButton(panelRect, "PrevWaveButton", new Vector2(0f, -42f), new Vector2(84f, 44f), "Prev");
+            nextWaveButton = CreateTravelButton(panelRect, "NextWaveButton", new Vector2(92f, -42f), new Vector2(84f, 44f), "Next");
+            travelButton = CreateTravelButton(panelRect, "TravelWaveButton", new Vector2(184f, -42f), new Vector2(176f, 44f), "Travel to W1");
+            travelButtonText = GetButtonLabel(travelButton);
 
             ownsRuntimeWaveTravelControls = true;
         }
@@ -496,6 +512,7 @@ namespace IdleGame
             previousWaveButton = null;
             nextWaveButton = null;
             travelButton = null;
+            travelButtonText = null;
             ownsRuntimeWaveTravelControls = false;
         }
 
@@ -567,6 +584,22 @@ namespace IdleGame
             }
 
             return button;
+        }
+
+        private static TMP_Text GetButtonLabel(Button button)
+        {
+            if (button == null)
+            {
+                return null;
+            }
+
+            var labelTransform = button.transform.Find("Label");
+            return labelTransform != null ? labelTransform.GetComponent<TMP_Text>() : null;
+        }
+
+        private static string BuildWaveTravelReadout(GameSnapshot snapshot)
+        {
+            return $"Current W{snapshot.Wave} | Start W{snapshot.SelectedStartWave} | Max W{snapshot.HighestWaveReached}";
         }
 
         private static bool IsBossEnemy(string enemyId)
