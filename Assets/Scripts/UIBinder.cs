@@ -79,14 +79,16 @@ namespace IdleGame
 
             if (playerStatsText != null)
             {
-                playerStatsText.text = $"ATK {snapshot.PlayerStats.AttackPower} | SPD {snapshot.PlayerStats.AttacksPerSecond:0.00}";
+                playerStatsText.text = snapshot.Battle.PlayerAlive
+                    ? $"HP {snapshot.Battle.PlayerHealth}/{snapshot.Battle.PlayerMaxHealth} | ATK {snapshot.PlayerStats.AttackPower} | SPD {snapshot.PlayerStats.AttacksPerSecond:0.00}"
+                    : $"HP 0/{snapshot.Battle.PlayerMaxHealth} | Defeated ({snapshot.Battle.PlayerRespawnRemaining:0.0}s) | ATK {snapshot.PlayerStats.AttackPower} | SPD {snapshot.PlayerStats.AttacksPerSecond:0.00}";
             }
 
             if (enemyText != null)
             {
                 enemyText.text = snapshot.Battle.EnemyAlive
                     ? $"{snapshot.Battle.EnemyId} HP {snapshot.Battle.EnemyHealth}/{snapshot.Battle.EnemyMaxHealth}"
-                    : $"{snapshot.Battle.EnemyId} respawns in {snapshot.Battle.RespawnRemaining:0.0}s";
+                    : $"{snapshot.Battle.EnemyId} respawns in {snapshot.Battle.EnemyRespawnRemaining:0.0}s";
             }
 
             RefreshUpgradeButton(snapshot, UpgradeTrack.AttackPower, attackPowerButton, attackPowerButtonText);

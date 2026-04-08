@@ -63,6 +63,13 @@ namespace IdleGame
             attackCooldown = 0f;
         }
 
+        public void SetStats(CombatantStats stats)
+        {
+            Stats = stats;
+            CurrentHealth = Mathf.Clamp(CurrentHealth, 0, stats.MaxHealth);
+            attackCooldown = 0f;
+        }
+
         public bool TryAttack(float deltaTime)
         {
             if (!IsAlive)
