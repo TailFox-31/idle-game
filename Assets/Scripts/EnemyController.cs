@@ -90,6 +90,7 @@ namespace IdleGame
         private static readonly BossFamilyProfile DefaultBossProfile = new("Enemy", "Elite", 2.8f, 1.55f, 1.1f, 4f);
         private static readonly BossFamilyProfile[] DefaultBossProfiles =
         {
+            new("Slime", "Crown", 2.7f, 1.35f, 1f, 4f),
             new("Boar", "Heavy", 2.6f, 1.45f, 0.8f, 4f),
             new("Wisp", "Frenzy", 2.15f, 1.2f, 1.5f, 4.6f),
             new("Bandit", "Executioner", 2.35f, 1.95f, 0.65f, 5.1f),
@@ -133,16 +134,17 @@ namespace IdleGame
         {
             var normalizedWave = Mathf.Max(FirstWave, wave);
             var waveOffset = normalizedWave - FirstWave;
+            var isBossWave = IsBossWave(normalizedWave);
+            var archetypeWave = isBossWave ? normalizedWave - 1 : normalizedWave;
             var scaledBaseStats = new CombatantStats(
                 ScaleInt(baseStats.MaxHealth, healthMultiplierPerWave, waveOffset),
                 ScaleInt(baseStats.AttackPower, attackMultiplierPerWave, waveOffset),
                 ScaleAttackSpeed(baseStats.AttacksPerSecond, waveOffset));
-            var archetype = GetArchetypeForWave(normalizedWave);
+            var archetype = GetArchetypeForWave(archetypeWave);
             var shapedStats = scaledBaseStats.Multiply(
                 archetype.HealthMultiplier,
                 archetype.AttackMultiplier,
                 archetype.AttackSpeedMultiplier);
-            var isBossWave = IsBossWave(normalizedWave);
             var bossProfile = isBossWave ? GetBossProfile(archetype.EnemyId) : DefaultBossProfile;
             var behaviorLabel = string.Empty;
             if (isBossWave)
@@ -219,9 +221,9 @@ namespace IdleGame
             return new List<EnemyArchetypeStage>
             {
                 new EnemyArchetypeStage(FirstWave, enemyId, 1f, 1f, 1f, 1f),
-                new EnemyArchetypeStage(10, "Boar", 1.3f, 1.05f, 0.85f, 1.2f),
-                new EnemyArchetypeStage(20, "Wisp", 1.1f, 1.25f, 1.3f, 1.45f),
-                new EnemyArchetypeStage(30, "Bandit", 1.25f, 1.55f, 1.05f, 1.7f),
+                new EnemyArchetypeStage(11, "Boar", 1.3f, 1.05f, 0.85f, 1.2f),
+                new EnemyArchetypeStage(21, "Wisp", 1.1f, 1.25f, 1.3f, 1.45f),
+                new EnemyArchetypeStage(31, "Bandit", 1.25f, 1.55f, 1.05f, 1.7f),
             };
         }
 

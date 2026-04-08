@@ -81,6 +81,11 @@ namespace IdleGame
             return Mathf.Max(1f, 1f + (goldGainMultiplierPerLevel * level));
         }
 
+        public int GetGoldGainBonusPercent(int level)
+        {
+            return Mathf.Max(0, Mathf.RoundToInt((GetGoldGainMultiplier(level) - 1f) * 100f));
+        }
+
         public CombatantStats Apply(CombatantStats stats, int level)
         {
             if (level <= 0)

@@ -55,7 +55,7 @@ public static class IdleGamePrototypeSceneBuilder
         var headerPanel = EnsureChildRectTransform(uiRoot, HeaderPanelName);
         ConfigureHeaderPanel(headerPanel);
 
-        var goldReadout = EnsureReadout(headerPanel, GoldReadoutName, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(20f, -20f), "Gold: 0");
+        var goldReadout = EnsureReadout(headerPanel, GoldReadoutName, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(20f, -20f), "G 0 | Loot +0% | W1 | N5");
         var playerStatsReadout = EnsureReadout(headerPanel, PlayerStatsReadoutName, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(20f, -66f), "ATK 0 | SPD 0.00 | DEF 0");
         var enemyStatusReadout = EnsureReadout(headerPanel, EnemyStatusReadoutName, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-20f, -20f), "Enemy HP 0/0");
         enemyStatusReadout.alignment = TextAlignmentOptions.TopRight;
@@ -69,7 +69,7 @@ public static class IdleGamePrototypeSceneBuilder
         var maxHealthButton = EnsureButton(upgradesPanel, MaxHealthButtonName, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, -74f), "Health Lv.0 (16g)");
         var defenseButton = EnsureButton(upgradesPanel, DefenseButtonName, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, -148f), "Defense Lv.0 (18g)");
         var attackSpeedButton = EnsureButton(upgradesPanel, AttackSpeedButtonName, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, -222f), "Speed Lv.0 (24g)");
-        var goldGainButton = EnsureButton(upgradesPanel, GoldGainButtonName, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, -296f), "Gold Lv.0 (24g)");
+        var goldGainButton = EnsureButton(upgradesPanel, GoldGainButtonName, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, -296f), "Bounty +0% (24g)");
 
         EnsureEventSystem(scene);
 
