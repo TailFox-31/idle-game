@@ -68,10 +68,11 @@ public static class IdleGamePrototypeSceneBuilder
         resetSaveButton.GetComponent<Image>().color = new Color32(122, 54, 54, 220);
         var waveTravelPanel = EnsureChildRectTransform(headerPanel, WaveTravelPanelName);
         ConfigureWaveTravelPanel(waveTravelPanel);
-        var startWaveReadout = EnsureReadout(waveTravelPanel, StartWaveReadoutName, new Vector2(0f, 1f), new Vector2(1f, 1f), Vector2.zero, "Current W1 | Start W1 | Max W1");
+        var startWaveReadout = EnsureReadout(waveTravelPanel, StartWaveReadoutName, new Vector2(0f, 1f), new Vector2(1f, 1f), Vector2.zero, "Now W1 | Target W1 | Best W1");
         startWaveReadout.rectTransform.sizeDelta = new Vector2(360f, 30f);
         startWaveReadout.alignment = TextAlignmentOptions.MidlineRight;
         startWaveReadout.fontSize = 22f;
+        startWaveReadout.richText = true;
         var previousWaveButton = EnsureButton(waveTravelPanel, PreviousWaveButtonName, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, -42f), "Prev", new Vector2(84f, 44f), 20f);
         var nextWaveButton = EnsureButton(waveTravelPanel, NextWaveButtonName, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(92f, -42f), "Next", new Vector2(84f, 44f), 20f);
         var travelButton = EnsureButton(waveTravelPanel, TravelButtonName, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(184f, -42f), "Travel to W1", new Vector2(176f, 44f), 18f);
