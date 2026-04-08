@@ -61,6 +61,11 @@ namespace IdleGame
         }
 
         private const int FirstWave = 1;
+        private const int BossWaveInterval = 10;
+        private const float BossHealthMultiplier = 3.5f;
+        private const float BossAttackMultiplier = 1.75f;
+        private const float BossAttackSpeedMultiplier = 1.15f;
+        private const float BossGoldMultiplier = 4f;
 
         [SerializeField]
         private string enemyId = "Slime";
@@ -109,12 +114,27 @@ namespace IdleGame
                 archetype.HealthMultiplier,
                 archetype.AttackMultiplier,
                 archetype.AttackSpeedMultiplier);
+            var isBossWave = IsBossWave(normalizedWave);
+            if (isBossWave)
+            {
+                shapedStats = shapedStats.Multiply(
+                    BossHealthMultiplier,
+                    BossAttackMultiplier,
+                    BossAttackSpeedMultiplier);
+            }
+
+            var enemyName = isBossWave
+                ? BuildBossEnemyId(archetype.EnemyId)
+                : archetype.EnemyId;
+            var reward = Mathf.Max(
+                1,
+                Mathf.RoundToInt(ScaleInt(goldReward, goldMultiplierPerWave, waveOffset) * archetype.GoldMultiplier * (isBossWave ? BossGoldMultiplier : 1f)));
 
             return new EnemySpawnData(
                 normalizedWave,
-                archetype.EnemyId,
+                enemyName,
                 shapedStats,
-                Mathf.Max(1, Mathf.RoundToInt(ScaleInt(goldReward, goldMultiplierPerWave, waveOffset) * archetype.GoldMultiplier)),
+                reward,
                 respawnDelay);
         }
 
@@ -175,6 +195,22 @@ namespace IdleGame
         {
             var scaledValue = baseValue * (1f + (multiplierPerWave * Mathf.Max(0, waveOffset)));
             return Mathf.Max(1, Mathf.RoundToInt(scaledValue));
+        }
+
+        private static bool IsBossWave(int wave)
+        {
+            return wave >= BossWaveInterval && wave % BossWaveInterval == 0;
+        }
+
+        private static string BuildBossEnemyId(string enemyArchetypeId)
+        {
+            var familyId = string.IsNullOrWhiteSpace(enemyArchetypeId) ? "Enemy" : enemyArchetypeId.Trim();
+            if (familyId.StartsWith("Boss_", StringComparison.Ordinal))
+            {
+                return familyId;
+            }
+
+            return $"Boss_{familyId}";
         }
 
         private float ScaleAttackSpeed(float baseAttackSpeed, int waveOffset)

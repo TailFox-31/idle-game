@@ -29,6 +29,12 @@ namespace IdleGame
         [SerializeField]
         private TMP_Text attackSpeedButtonText;
 
+        [SerializeField]
+        private Button maxHealthButton;
+
+        [SerializeField]
+        private TMP_Text maxHealthButtonText;
+
         private GameManager gameManager;
 
         public void Bind(GameManager target)
@@ -55,6 +61,11 @@ namespace IdleGame
             gameManager?.TryPurchaseUpgrade(UpgradeTrack.AttackSpeed);
         }
 
+        public void RequestMaxHealthUpgrade()
+        {
+            gameManager?.TryPurchaseUpgrade(UpgradeTrack.MaxHealth);
+        }
+
         private void OnEnable()
         {
             RegisterButtons();
@@ -72,11 +83,13 @@ namespace IdleGame
 
         private void Refresh(GameSnapshot snapshot)
         {
+            var bossTag = IsBossEnemy(snapshot.Battle.EnemyId) ? " BOSS" : string.Empty;
+
             if (goldText != null)
             {
                 goldText.text = snapshot.LastMilestoneWave > 0
-                    ? $"Gold {snapshot.Gold} | W{snapshot.Wave} | Next {snapshot.NextMilestoneWave} | Last {snapshot.LastMilestoneWave} +{snapshot.LastMilestoneGoldReward}g/+{snapshot.LastMilestoneAttackReward}ATK"
-                    : $"Gold {snapshot.Gold} | W{snapshot.Wave} | Next {snapshot.NextMilestoneWave}";
+                    ? $"G {snapshot.Gold} | W{snapshot.Wave}{bossTag} | N{snapshot.NextMilestoneWave} | L{snapshot.LastMilestoneWave} +{snapshot.LastMilestoneGoldReward}g/+{snapshot.LastMilestoneAttackReward}A"
+                    : $"G {snapshot.Gold} | W{snapshot.Wave}{bossTag} | N{snapshot.NextMilestoneWave}";
             }
 
             if (playerStatsText != null)
@@ -88,26 +101,33 @@ namespace IdleGame
 
             if (enemyText != null)
             {
+                var enemyPrefix = IsBossEnemy(snapshot.Battle.EnemyId) ? "Boss " : string.Empty;
                 enemyText.text = snapshot.Battle.EnemyAlive
-                    ? $"W{snapshot.Battle.Wave} {snapshot.Battle.EnemyId} {snapshot.Battle.EnemyHealth}/{snapshot.Battle.EnemyMaxHealth} | {snapshot.Battle.EnemyAttackPower}ATK {snapshot.Battle.EnemyAttacksPerSecond:0.00}SPD | {snapshot.Battle.EnemyGoldReward}g"
-                    : $"W{snapshot.Battle.Wave} {snapshot.Battle.EnemyId} re {snapshot.Battle.EnemyRespawnRemaining:0.0}s | {snapshot.Battle.EnemyAttackPower}ATK {snapshot.Battle.EnemyAttacksPerSecond:0.00}SPD | {snapshot.Battle.EnemyGoldReward}g";
+                    ? $"{enemyPrefix}W{snapshot.Battle.Wave} {snapshot.Battle.EnemyId} {snapshot.Battle.EnemyHealth}/{snapshot.Battle.EnemyMaxHealth} | {snapshot.Battle.EnemyAttackPower}ATK {snapshot.Battle.EnemyAttacksPerSecond:0.00}SPD | {snapshot.Battle.EnemyGoldReward}g"
+                    : $"{enemyPrefix}W{snapshot.Battle.Wave} {snapshot.Battle.EnemyId} re {snapshot.Battle.EnemyRespawnRemaining:0.0}s | {snapshot.Battle.EnemyAttackPower}ATK {snapshot.Battle.EnemyAttacksPerSecond:0.00}SPD | {snapshot.Battle.EnemyGoldReward}g";
             }
 
             RefreshUpgradeButton(snapshot, UpgradeTrack.AttackPower, attackPowerButton, attackPowerButtonText);
             RefreshUpgradeButton(snapshot, UpgradeTrack.AttackSpeed, attackSpeedButton, attackSpeedButtonText);
+            RefreshUpgradeButton(snapshot, UpgradeTrack.MaxHealth, maxHealthButton, maxHealthButtonText);
         }
 
-        private void RefreshUpgradeButton(GameSnapshot snapshot, UpgradeTrack track, Button button, TMP_Text buttonText)
+        private static UpgradeViewData? GetUpgradeViewData(GameSnapshot snapshot, UpgradeTrack track)
         {
-            UpgradeViewData? data = null;
             foreach (var entry in snapshot.Upgrades)
             {
                 if (entry.Track == track)
                 {
-                    data = entry;
-                    break;
+                    return entry;
                 }
             }
+
+            return null;
+        }
+
+        private void RefreshUpgradeButton(GameSnapshot snapshot, UpgradeTrack track, Button button, TMP_Text buttonText)
+        {
+            var data = GetUpgradeViewData(snapshot, track);
 
             if (buttonText != null && data.HasValue)
             {
@@ -131,6 +151,11 @@ namespace IdleGame
             {
                 attackSpeedButton.onClick.AddListener(RequestAttackSpeedUpgrade);
             }
+
+            if (maxHealthButton != null)
+            {
+                maxHealthButton.onClick.AddListener(RequestMaxHealthUpgrade);
+            }
         }
 
         private void UnregisterButtons()
@@ -144,6 +169,11 @@ namespace IdleGame
             {
                 attackSpeedButton.onClick.RemoveListener(RequestAttackSpeedUpgrade);
             }
+
+            if (maxHealthButton != null)
+            {
+                maxHealthButton.onClick.RemoveListener(RequestMaxHealthUpgrade);
+            }
         }
 
         private void Unbind()
@@ -155,6 +185,11 @@ namespace IdleGame
 
             gameManager.StateChanged -= Refresh;
             gameManager = null;
+        }
+
+        private static bool IsBossEnemy(string enemyId)
+        {
+            return !string.IsNullOrWhiteSpace(enemyId) && enemyId.StartsWith("Boss_", System.StringComparison.Ordinal);
         }
     }
 }

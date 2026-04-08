@@ -6,7 +6,8 @@ namespace IdleGame
     public enum UpgradeTrack
     {
         AttackPower = 0,
-        AttackSpeed = 1,
+        MaxHealth = 1,
+        AttackSpeed = 2,
     }
 
     [Serializable]
@@ -24,6 +25,9 @@ namespace IdleGame
         [SerializeField, Min(0)]
         private int attackPowerPerLevel = 1;
 
+        [SerializeField, Min(0)]
+        private int maxHealthPerLevel = 5;
+
         [SerializeField, Min(0f)]
         private float attackSpeedPerLevel = 0.1f;
 
@@ -36,12 +40,14 @@ namespace IdleGame
             int startingCost,
             float costMultiplier,
             int attackPowerPerLevel = 0,
+            int maxHealthPerLevel = 0,
             float attackSpeedPerLevel = 0f)
         {
             this.track = track;
             this.startingCost = Mathf.Max(1, startingCost);
             this.costMultiplier = Mathf.Max(1f, costMultiplier);
             this.attackPowerPerLevel = Mathf.Max(0, attackPowerPerLevel);
+            this.maxHealthPerLevel = Mathf.Max(0, maxHealthPerLevel);
             this.attackSpeedPerLevel = Mathf.Max(0f, attackSpeedPerLevel);
         }
 
@@ -63,6 +69,7 @@ namespace IdleGame
             return track switch
             {
                 UpgradeTrack.AttackPower => stats.Add(attackPower: attackPowerPerLevel * level),
+                UpgradeTrack.MaxHealth => stats.Add(maxHealth: maxHealthPerLevel * level),
                 UpgradeTrack.AttackSpeed => stats.Add(attacksPerSecond: attackSpeedPerLevel * level),
                 _ => stats,
             };
