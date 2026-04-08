@@ -100,8 +100,9 @@ namespace IdleGame
         [SerializeField]
         private List<UpgradeDefinition> upgrades = new()
         {
-            new UpgradeDefinition(UpgradeTrack.AttackPower, 10, 1.5f, attackPowerPerLevel: 1),
-            new UpgradeDefinition(UpgradeTrack.AttackSpeed, 15, 1.5f, attackSpeedPerLevel: 0.15f),
+            new UpgradeDefinition(UpgradeTrack.AttackPower, 10, 1.35f, attackPowerPerLevel: 1),
+            new UpgradeDefinition(UpgradeTrack.MaxHealth, 15, 1.45f, maxHealthPerLevel: 8),
+            new UpgradeDefinition(UpgradeTrack.AttackSpeed, 20, 1.6f, attackSpeedPerLevel: 0.15f),
         };
 
         private readonly Dictionary<UpgradeTrack, UpgradeState> upgradeStates = new();

@@ -55,9 +55,27 @@ namespace IdleGame
             gameManager?.TryPurchaseUpgrade(UpgradeTrack.AttackSpeed);
         }
 
+        public void RequestMaxHealthUpgrade()
+        {
+            gameManager?.TryPurchaseUpgrade(UpgradeTrack.MaxHealth);
+        }
+
         private void OnEnable()
         {
             RegisterButtons();
+        }
+
+        private void Update()
+        {
+            if (gameManager == null)
+            {
+                return;
+            }
+
+            if (Input.GetKeyDown(KeyCode.H))
+            {
+                RequestMaxHealthUpgrade();
+            }
         }
 
         private void OnDisable()
@@ -72,42 +90,54 @@ namespace IdleGame
 
         private void Refresh(GameSnapshot snapshot)
         {
+            var maxHealthUpgrade = GetUpgradeViewData(snapshot, UpgradeTrack.MaxHealth);
+            var bossTag = IsBossEnemy(snapshot.Battle.EnemyId) ? " BOSS" : string.Empty;
+
             if (goldText != null)
             {
                 goldText.text = snapshot.LastMilestoneWave > 0
-                    ? $"Gold {snapshot.Gold} | W{snapshot.Wave} | Next {snapshot.NextMilestoneWave} | Last {snapshot.LastMilestoneWave} +{snapshot.LastMilestoneGoldReward}g/+{snapshot.LastMilestoneAttackReward}ATK"
-                    : $"Gold {snapshot.Gold} | W{snapshot.Wave} | Next {snapshot.NextMilestoneWave}";
+                    ? $"G {snapshot.Gold} | W{snapshot.Wave}{bossTag} | N{snapshot.NextMilestoneWave} | L{snapshot.LastMilestoneWave} +{snapshot.LastMilestoneGoldReward}g/+{snapshot.LastMilestoneAttackReward}A"
+                    : $"G {snapshot.Gold} | W{snapshot.Wave}{bossTag} | N{snapshot.NextMilestoneWave}";
             }
 
             if (playerStatsText != null)
             {
+                var maxHealthUpgradeReadout = maxHealthUpgrade.HasValue
+                    ? $" | HP+ {maxHealthUpgrade.Value.NextCost}g[H]"
+                    : string.Empty;
                 playerStatsText.text = snapshot.Battle.PlayerAlive
-                    ? $"HP {snapshot.Battle.PlayerHealth}/{snapshot.Battle.PlayerMaxHealth} | ATK {snapshot.PlayerStats.AttackPower} | SPD {snapshot.PlayerStats.AttacksPerSecond:0.00} | M+{snapshot.MilestoneAttackBonus}"
-                    : $"HP 0/{snapshot.Battle.PlayerMaxHealth} | Down {snapshot.Battle.PlayerRespawnRemaining:0.0}s | ATK {snapshot.PlayerStats.AttackPower} | M+{snapshot.MilestoneAttackBonus}";
+                    ? $"HP {snapshot.Battle.PlayerHealth}/{snapshot.Battle.PlayerMaxHealth} | ATK {snapshot.PlayerStats.AttackPower} | SPD {snapshot.PlayerStats.AttacksPerSecond:0.00} | M+{snapshot.MilestoneAttackBonus}{maxHealthUpgradeReadout}"
+                    : $"HP 0/{snapshot.Battle.PlayerMaxHealth} | Down {snapshot.Battle.PlayerRespawnRemaining:0.0}s | ATK {snapshot.PlayerStats.AttackPower} | M+{snapshot.MilestoneAttackBonus}{maxHealthUpgradeReadout}";
             }
 
             if (enemyText != null)
             {
+                var enemyPrefix = IsBossEnemy(snapshot.Battle.EnemyId) ? "Boss " : string.Empty;
                 enemyText.text = snapshot.Battle.EnemyAlive
-                    ? $"W{snapshot.Battle.Wave} {snapshot.Battle.EnemyId} {snapshot.Battle.EnemyHealth}/{snapshot.Battle.EnemyMaxHealth} | {snapshot.Battle.EnemyAttackPower}ATK {snapshot.Battle.EnemyAttacksPerSecond:0.00}SPD | {snapshot.Battle.EnemyGoldReward}g"
-                    : $"W{snapshot.Battle.Wave} {snapshot.Battle.EnemyId} re {snapshot.Battle.EnemyRespawnRemaining:0.0}s | {snapshot.Battle.EnemyAttackPower}ATK {snapshot.Battle.EnemyAttacksPerSecond:0.00}SPD | {snapshot.Battle.EnemyGoldReward}g";
+                    ? $"{enemyPrefix}W{snapshot.Battle.Wave} {snapshot.Battle.EnemyId} {snapshot.Battle.EnemyHealth}/{snapshot.Battle.EnemyMaxHealth} | {snapshot.Battle.EnemyAttackPower}ATK {snapshot.Battle.EnemyAttacksPerSecond:0.00}SPD | {snapshot.Battle.EnemyGoldReward}g"
+                    : $"{enemyPrefix}W{snapshot.Battle.Wave} {snapshot.Battle.EnemyId} re {snapshot.Battle.EnemyRespawnRemaining:0.0}s | {snapshot.Battle.EnemyAttackPower}ATK {snapshot.Battle.EnemyAttacksPerSecond:0.00}SPD | {snapshot.Battle.EnemyGoldReward}g";
             }
 
             RefreshUpgradeButton(snapshot, UpgradeTrack.AttackPower, attackPowerButton, attackPowerButtonText);
             RefreshUpgradeButton(snapshot, UpgradeTrack.AttackSpeed, attackSpeedButton, attackSpeedButtonText);
         }
 
-        private void RefreshUpgradeButton(GameSnapshot snapshot, UpgradeTrack track, Button button, TMP_Text buttonText)
+        private static UpgradeViewData? GetUpgradeViewData(GameSnapshot snapshot, UpgradeTrack track)
         {
-            UpgradeViewData? data = null;
             foreach (var entry in snapshot.Upgrades)
             {
                 if (entry.Track == track)
                 {
-                    data = entry;
-                    break;
+                    return entry;
                 }
             }
+
+            return null;
+        }
+
+        private void RefreshUpgradeButton(GameSnapshot snapshot, UpgradeTrack track, Button button, TMP_Text buttonText)
+        {
+            var data = GetUpgradeViewData(snapshot, track);
 
             if (buttonText != null && data.HasValue)
             {
@@ -155,6 +185,11 @@ namespace IdleGame
 
             gameManager.StateChanged -= Refresh;
             gameManager = null;
+        }
+
+        private static bool IsBossEnemy(string enemyId)
+        {
+            return !string.IsNullOrWhiteSpace(enemyId) && enemyId.StartsWith("Boss_", System.StringComparison.Ordinal);
         }
     }
 }
