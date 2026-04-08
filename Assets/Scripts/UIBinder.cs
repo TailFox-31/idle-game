@@ -29,6 +29,12 @@ namespace IdleGame
         [SerializeField]
         private TMP_Text attackSpeedButtonText;
 
+        [SerializeField]
+        private Button maxHealthButton;
+
+        [SerializeField]
+        private TMP_Text maxHealthButtonText;
+
         private GameManager gameManager;
 
         public void Bind(GameManager target)
@@ -65,19 +71,6 @@ namespace IdleGame
             RegisterButtons();
         }
 
-        private void Update()
-        {
-            if (gameManager == null)
-            {
-                return;
-            }
-
-            if (Input.GetKeyDown(KeyCode.H))
-            {
-                RequestMaxHealthUpgrade();
-            }
-        }
-
         private void OnDisable()
         {
             UnregisterButtons();
@@ -90,7 +83,6 @@ namespace IdleGame
 
         private void Refresh(GameSnapshot snapshot)
         {
-            var maxHealthUpgrade = GetUpgradeViewData(snapshot, UpgradeTrack.MaxHealth);
             var bossTag = IsBossEnemy(snapshot.Battle.EnemyId) ? " BOSS" : string.Empty;
 
             if (goldText != null)
@@ -102,12 +94,9 @@ namespace IdleGame
 
             if (playerStatsText != null)
             {
-                var maxHealthUpgradeReadout = maxHealthUpgrade.HasValue
-                    ? $" | HP+ {maxHealthUpgrade.Value.NextCost}g[H]"
-                    : string.Empty;
                 playerStatsText.text = snapshot.Battle.PlayerAlive
-                    ? $"HP {snapshot.Battle.PlayerHealth}/{snapshot.Battle.PlayerMaxHealth} | ATK {snapshot.PlayerStats.AttackPower} | SPD {snapshot.PlayerStats.AttacksPerSecond:0.00} | M+{snapshot.MilestoneAttackBonus}{maxHealthUpgradeReadout}"
-                    : $"HP 0/{snapshot.Battle.PlayerMaxHealth} | Down {snapshot.Battle.PlayerRespawnRemaining:0.0}s | ATK {snapshot.PlayerStats.AttackPower} | M+{snapshot.MilestoneAttackBonus}{maxHealthUpgradeReadout}";
+                    ? $"HP {snapshot.Battle.PlayerHealth}/{snapshot.Battle.PlayerMaxHealth} | ATK {snapshot.PlayerStats.AttackPower} | SPD {snapshot.PlayerStats.AttacksPerSecond:0.00} | M+{snapshot.MilestoneAttackBonus}"
+                    : $"HP 0/{snapshot.Battle.PlayerMaxHealth} | Down {snapshot.Battle.PlayerRespawnRemaining:0.0}s | ATK {snapshot.PlayerStats.AttackPower} | M+{snapshot.MilestoneAttackBonus}";
             }
 
             if (enemyText != null)
@@ -120,6 +109,7 @@ namespace IdleGame
 
             RefreshUpgradeButton(snapshot, UpgradeTrack.AttackPower, attackPowerButton, attackPowerButtonText);
             RefreshUpgradeButton(snapshot, UpgradeTrack.AttackSpeed, attackSpeedButton, attackSpeedButtonText);
+            RefreshUpgradeButton(snapshot, UpgradeTrack.MaxHealth, maxHealthButton, maxHealthButtonText);
         }
 
         private static UpgradeViewData? GetUpgradeViewData(GameSnapshot snapshot, UpgradeTrack track)
@@ -161,6 +151,11 @@ namespace IdleGame
             {
                 attackSpeedButton.onClick.AddListener(RequestAttackSpeedUpgrade);
             }
+
+            if (maxHealthButton != null)
+            {
+                maxHealthButton.onClick.AddListener(RequestMaxHealthUpgrade);
+            }
         }
 
         private void UnregisterButtons()
@@ -173,6 +168,11 @@ namespace IdleGame
             if (attackSpeedButton != null)
             {
                 attackSpeedButton.onClick.RemoveListener(RequestAttackSpeedUpgrade);
+            }
+
+            if (maxHealthButton != null)
+            {
+                maxHealthButton.onClick.RemoveListener(RequestMaxHealthUpgrade);
             }
         }
 

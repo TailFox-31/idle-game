@@ -21,6 +21,7 @@ public static class IdleGamePrototypeSceneBuilder
     private const string EnemyStatusReadoutName = "EnemyStatusReadout";
     private const string AttackPowerButtonName = "AttackPowerUpgradeButton";
     private const string AttackSpeedButtonName = "AttackSpeedUpgradeButton";
+    private const string MaxHealthButtonName = "MaxHealthUpgradeButton";
     private const string LabelChildName = "Label";
     private const string GameManagerName = "GameManager";
     private const string EnemyControllerName = "EnemyController";
@@ -60,7 +61,8 @@ public static class IdleGamePrototypeSceneBuilder
         ConfigureUpgradePanel(upgradesPanel);
 
         var attackPowerButton = EnsureButton(upgradesPanel, AttackPowerButtonName, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 0f), "AttackPower Lv.0 (10g)");
-        var attackSpeedButton = EnsureButton(upgradesPanel, AttackSpeedButtonName, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, -74f), "AttackSpeed Lv.0 (15g)");
+        var maxHealthButton = EnsureButton(upgradesPanel, MaxHealthButtonName, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, -74f), "MaxHealth Lv.0 (15g)");
+        var attackSpeedButton = EnsureButton(upgradesPanel, AttackSpeedButtonName, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, -148f), "AttackSpeed Lv.0 (20g)");
 
         EnsureEventSystem(scene);
 
@@ -74,7 +76,7 @@ public static class IdleGamePrototypeSceneBuilder
         var uiBinder = EnsureComponent<UIBinder>(uiBinderObject);
 
         WireGameManager(gameManager, enemyController, uiBinder);
-        WireUiBinder(uiBinder, goldReadout, playerStatsReadout, enemyStatusReadout, attackPowerButton, attackSpeedButton);
+        WireUiBinder(uiBinder, goldReadout, playerStatsReadout, enemyStatusReadout, attackPowerButton, maxHealthButton, attackSpeedButton);
 
         EditorSceneManager.MarkSceneDirty(scene);
         Selection.activeGameObject = systemsRoot;
@@ -157,6 +159,7 @@ public static class IdleGamePrototypeSceneBuilder
         TMP_Text playerStatsReadout,
         TMP_Text enemyStatusReadout,
         Button attackPowerButton,
+        Button maxHealthButton,
         Button attackSpeedButton)
     {
         var serializedObject = new SerializedObject(uiBinder);
@@ -165,6 +168,8 @@ public static class IdleGamePrototypeSceneBuilder
         SetObjectReference(serializedObject, "enemyText", enemyStatusReadout);
         SetObjectReference(serializedObject, "attackPowerButton", attackPowerButton);
         SetObjectReference(serializedObject, "attackPowerButtonText", GetButtonLabel(attackPowerButton));
+        SetObjectReference(serializedObject, "maxHealthButton", maxHealthButton);
+        SetObjectReference(serializedObject, "maxHealthButtonText", GetButtonLabel(maxHealthButton));
         SetObjectReference(serializedObject, "attackSpeedButton", attackSpeedButton);
         SetObjectReference(serializedObject, "attackSpeedButtonText", GetButtonLabel(attackSpeedButton));
         serializedObject.ApplyModifiedPropertiesWithoutUndo();
@@ -288,7 +293,7 @@ public static class IdleGamePrototypeSceneBuilder
         rectTransform.anchorMax = new Vector2(0f, 0f);
         rectTransform.pivot = new Vector2(0f, 0f);
         rectTransform.anchoredPosition = new Vector2(20f, 20f);
-        rectTransform.sizeDelta = new Vector2(340f, 140f);
+        rectTransform.sizeDelta = new Vector2(340f, 220f);
     }
 
     private static void StretchToParent(RectTransform rectTransform)
