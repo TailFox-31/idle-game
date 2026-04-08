@@ -92,6 +92,7 @@ namespace IdleGame
         {
             new("Boar", "Heavy", 2.6f, 1.45f, 0.8f, 4f),
             new("Wisp", "Frenzy", 2.15f, 1.2f, 1.5f, 4.6f),
+            new("Bandit", "Executioner", 2.35f, 1.95f, 0.65f, 5.1f),
         };
 
         [SerializeField]
@@ -208,6 +209,7 @@ namespace IdleGame
                 return BuildDefaultArchetypes();
             }
 
+            MergeMissingDefaultArchetypes(validStages);
             validStages.Sort((left, right) => left.StartWave.CompareTo(right.StartWave));
             return validStages;
         }
@@ -219,7 +221,40 @@ namespace IdleGame
                 new EnemyArchetypeStage(FirstWave, enemyId, 1f, 1f, 1f, 1f),
                 new EnemyArchetypeStage(10, "Boar", 1.3f, 1.05f, 0.85f, 1.2f),
                 new EnemyArchetypeStage(20, "Wisp", 1.1f, 1.25f, 1.3f, 1.45f),
+                new EnemyArchetypeStage(30, "Bandit", 1.25f, 1.55f, 1.05f, 1.7f),
             };
+        }
+
+        private void MergeMissingDefaultArchetypes(List<EnemyArchetypeStage> validStages)
+        {
+            var defaults = BuildDefaultArchetypes();
+            foreach (var defaultStage in defaults)
+            {
+                if (ContainsArchetype(validStages, defaultStage.StartWave, defaultStage.EnemyId))
+                {
+                    continue;
+                }
+
+                validStages.Add(defaultStage);
+            }
+        }
+
+        private static bool ContainsArchetype(List<EnemyArchetypeStage> stages, int startWave, string enemyArchetypeId)
+        {
+            foreach (var stage in stages)
+            {
+                if (stage.StartWave != startWave)
+                {
+                    continue;
+                }
+
+                if (string.Equals(stage.EnemyId, enemyArchetypeId, StringComparison.Ordinal))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private static int ScaleInt(int baseValue, float multiplierPerWave, int waveOffset)
