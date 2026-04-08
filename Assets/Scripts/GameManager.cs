@@ -22,13 +22,28 @@ namespace IdleGame
 
     public readonly struct GameSnapshot
     {
-        public GameSnapshot(int gold, int wave, CombatantStats playerStats, BattleSnapshot battle, UpgradeViewData[] upgrades)
+        public GameSnapshot(
+            int gold,
+            int wave,
+            CombatantStats playerStats,
+            BattleSnapshot battle,
+            UpgradeViewData[] upgrades,
+            int nextMilestoneWave,
+            int milestoneAttackBonus,
+            int lastMilestoneWave,
+            int lastMilestoneGoldReward,
+            int lastMilestoneAttackReward)
         {
             Gold = gold;
             Wave = wave;
             PlayerStats = playerStats;
             Battle = battle;
             Upgrades = upgrades;
+            NextMilestoneWave = nextMilestoneWave;
+            MilestoneAttackBonus = milestoneAttackBonus;
+            LastMilestoneWave = lastMilestoneWave;
+            LastMilestoneGoldReward = lastMilestoneGoldReward;
+            LastMilestoneAttackReward = lastMilestoneAttackReward;
         }
 
         public int Gold { get; }
@@ -40,6 +55,16 @@ namespace IdleGame
         public BattleSnapshot Battle { get; }
 
         public UpgradeViewData[] Upgrades { get; }
+
+        public int NextMilestoneWave { get; }
+
+        public int MilestoneAttackBonus { get; }
+
+        public int LastMilestoneWave { get; }
+
+        public int LastMilestoneGoldReward { get; }
+
+        public int LastMilestoneAttackReward { get; }
     }
 
     public sealed class GameManager : MonoBehaviour
@@ -59,6 +84,19 @@ namespace IdleGame
         [SerializeField, Min(0f)]
         private float playerRespawnDelay = 2f;
 
+        [Header("Milestone Rewards")]
+        [SerializeField, Min(2)]
+        private int milestoneWaveInterval = 5;
+
+        [SerializeField, Min(0)]
+        private int milestoneGoldReward = 20;
+
+        [SerializeField, Min(0)]
+        private int milestoneGoldRewardPerMilestone = 10;
+
+        [SerializeField, Min(0)]
+        private int milestoneAttackPowerPerMilestone = 1;
+
         [SerializeField]
         private List<UpgradeDefinition> upgrades = new()
         {
@@ -70,6 +108,10 @@ namespace IdleGame
         private AutoBattleSystem battleSystem;
         private int gold;
         private int currentWave = 1;
+        private int lastClaimedMilestoneWave;
+        private int lastMilestoneGoldReward;
+        private int lastMilestoneAttackReward;
+        private int milestoneAttackBonus;
 
         public event Action<GameSnapshot> StateChanged;
 
@@ -147,7 +189,7 @@ namespace IdleGame
                 stats = state.Definition.Apply(stats, state.Level);
             }
 
-            return stats;
+            return stats.Add(attackPower: milestoneAttackBonus);
         }
 
         private GameSnapshot BuildSnapshot()
@@ -163,7 +205,17 @@ namespace IdleGame
                 ? battleSystem.Snapshot
                 : new BattleSnapshot(0, string.Empty, 0, 0, false, 0f, 0, 0, 0, 0f, 0, false, 0f);
 
-            return new GameSnapshot(gold, currentWave, BuildPlayerStats(), battle, upgradeData);
+            return new GameSnapshot(
+                gold,
+                currentWave,
+                BuildPlayerStats(),
+                battle,
+                upgradeData,
+                GetNextMilestoneWave(currentWave),
+                milestoneAttackBonus,
+                lastClaimedMilestoneWave,
+                lastMilestoneGoldReward,
+                lastMilestoneAttackReward);
         }
 
         private void HandleGoldAwarded(int amount)
@@ -180,8 +232,52 @@ namespace IdleGame
             }
 
             currentWave = Mathf.Max(currentWave, defeatedEnemy.Wave) + 1;
+            TryGrantMilestoneReward(currentWave);
             battleSystem?.QueueEnemy(enemyController.CreateSpawnDataForWave(currentWave));
             PublishState();
+        }
+
+        private void TryGrantMilestoneReward(int reachedWave)
+        {
+            var milestoneWave = GetReachedMilestoneWave(reachedWave);
+            if (milestoneWave <= lastClaimedMilestoneWave)
+            {
+                return;
+            }
+
+            var milestoneIndex = milestoneWave / Mathf.Max(2, milestoneWaveInterval);
+            var goldReward = milestoneGoldReward + (milestoneGoldRewardPerMilestone * Mathf.Max(0, milestoneIndex - 1));
+            var attackReward = milestoneAttackPowerPerMilestone;
+
+            lastClaimedMilestoneWave = milestoneWave;
+            lastMilestoneGoldReward = Mathf.Max(0, goldReward);
+            lastMilestoneAttackReward = Mathf.Max(0, attackReward);
+            gold += lastMilestoneGoldReward;
+            milestoneAttackBonus += lastMilestoneAttackReward;
+
+            if (lastMilestoneAttackReward > 0)
+            {
+                battleSystem?.SetPlayerStats(BuildPlayerStats());
+            }
+        }
+
+        private int GetReachedMilestoneWave(int wave)
+        {
+            var interval = Mathf.Max(2, milestoneWaveInterval);
+            if (wave < interval)
+            {
+                return 0;
+            }
+
+            return wave - (wave % interval);
+        }
+
+        private int GetNextMilestoneWave(int wave)
+        {
+            var interval = Mathf.Max(2, milestoneWaveInterval);
+            var normalizedWave = Mathf.Max(1, wave);
+            var remainder = normalizedWave % interval;
+            return remainder == 0 ? normalizedWave : normalizedWave + (interval - remainder);
         }
 
         private void PublishState()
