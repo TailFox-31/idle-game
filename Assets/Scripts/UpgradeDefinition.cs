@@ -7,7 +7,8 @@ namespace IdleGame
     {
         AttackPower = 0,
         MaxHealth = 1,
-        AttackSpeed = 2,
+        Defense = 2,
+        AttackSpeed = 3,
     }
 
     [Serializable]
@@ -31,6 +32,9 @@ namespace IdleGame
         [SerializeField, Min(0f)]
         private float attackSpeedPerLevel = 0.1f;
 
+        [SerializeField, Min(0)]
+        private int flatDamageReductionPerLevel = 1;
+
         public UpgradeDefinition()
         {
         }
@@ -41,7 +45,8 @@ namespace IdleGame
             float costMultiplier,
             int attackPowerPerLevel = 0,
             int maxHealthPerLevel = 0,
-            float attackSpeedPerLevel = 0f)
+            float attackSpeedPerLevel = 0f,
+            int flatDamageReductionPerLevel = 0)
         {
             this.track = track;
             this.startingCost = Mathf.Max(1, startingCost);
@@ -49,6 +54,7 @@ namespace IdleGame
             this.attackPowerPerLevel = Mathf.Max(0, attackPowerPerLevel);
             this.maxHealthPerLevel = Mathf.Max(0, maxHealthPerLevel);
             this.attackSpeedPerLevel = Mathf.Max(0f, attackSpeedPerLevel);
+            this.flatDamageReductionPerLevel = Mathf.Max(0, flatDamageReductionPerLevel);
         }
 
         public UpgradeTrack Track => track;
@@ -70,6 +76,7 @@ namespace IdleGame
             {
                 UpgradeTrack.AttackPower => stats.Add(attackPower: attackPowerPerLevel * level),
                 UpgradeTrack.MaxHealth => stats.Add(maxHealth: maxHealthPerLevel * level),
+                UpgradeTrack.Defense => stats.Add(flatDamageReduction: flatDamageReductionPerLevel * level),
                 UpgradeTrack.AttackSpeed => stats.Add(attacksPerSecond: attackSpeedPerLevel * level),
                 _ => stats,
             };

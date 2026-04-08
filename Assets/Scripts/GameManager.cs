@@ -101,8 +101,9 @@ namespace IdleGame
         private List<UpgradeDefinition> upgrades = new()
         {
             new UpgradeDefinition(UpgradeTrack.AttackPower, 10, 1.35f, attackPowerPerLevel: 1),
-            new UpgradeDefinition(UpgradeTrack.MaxHealth, 15, 1.45f, maxHealthPerLevel: 8),
-            new UpgradeDefinition(UpgradeTrack.AttackSpeed, 20, 1.6f, attackSpeedPerLevel: 0.15f),
+            new UpgradeDefinition(UpgradeTrack.MaxHealth, 16, 1.45f, maxHealthPerLevel: 8),
+            new UpgradeDefinition(UpgradeTrack.Defense, 18, 1.5f, flatDamageReductionPerLevel: 1),
+            new UpgradeDefinition(UpgradeTrack.AttackSpeed, 24, 1.6f, attackSpeedPerLevel: 0.15f),
         };
 
         private readonly Dictionary<UpgradeTrack, UpgradeState> upgradeStates = new();
@@ -187,13 +188,14 @@ namespace IdleGame
 
         private static bool HasExpectedUpgradeTracks(List<UpgradeDefinition> definitions)
         {
-            if (definitions == null || definitions.Count != 3)
+            if (definitions == null || definitions.Count != 4)
             {
                 return false;
             }
 
             var seenAttackPower = false;
             var seenMaxHealth = false;
+            var seenDefense = false;
             var seenAttackSpeed = false;
 
             foreach (var definition in definitions)
@@ -221,6 +223,14 @@ namespace IdleGame
 
                         seenMaxHealth = true;
                         break;
+                    case UpgradeTrack.Defense:
+                        if (seenDefense)
+                        {
+                            return false;
+                        }
+
+                        seenDefense = true;
+                        break;
                     case UpgradeTrack.AttackSpeed:
                         if (seenAttackSpeed)
                         {
@@ -234,7 +244,7 @@ namespace IdleGame
                 }
             }
 
-            return seenAttackPower && seenMaxHealth && seenAttackSpeed;
+            return seenAttackPower && seenMaxHealth && seenDefense && seenAttackSpeed;
         }
 
         private static List<UpgradeDefinition> BuildDefaultUpgradeDefinitions()
@@ -242,8 +252,9 @@ namespace IdleGame
             return new List<UpgradeDefinition>
             {
                 new UpgradeDefinition(UpgradeTrack.AttackPower, 10, 1.35f, attackPowerPerLevel: 1),
-                new UpgradeDefinition(UpgradeTrack.MaxHealth, 15, 1.45f, maxHealthPerLevel: 8),
-                new UpgradeDefinition(UpgradeTrack.AttackSpeed, 20, 1.6f, attackSpeedPerLevel: 0.15f),
+                new UpgradeDefinition(UpgradeTrack.MaxHealth, 16, 1.45f, maxHealthPerLevel: 8),
+                new UpgradeDefinition(UpgradeTrack.Defense, 18, 1.5f, flatDamageReductionPerLevel: 1),
+                new UpgradeDefinition(UpgradeTrack.AttackSpeed, 24, 1.6f, attackSpeedPerLevel: 0.15f),
             };
         }
 
@@ -282,7 +293,7 @@ namespace IdleGame
 
             var battle = battleSystem != null
                 ? battleSystem.Snapshot
-                : new BattleSnapshot(0, string.Empty, 0, 0, false, 0f, 0, 0, 0, 0f, 0, false, 0f);
+                : new BattleSnapshot(0, string.Empty, 0, 0, false, 0f, 0, 0, 0, 0f, 0, string.Empty, false, 0f);
 
             return new GameSnapshot(
                 gold,

@@ -30,6 +30,12 @@ namespace IdleGame
         private TMP_Text attackSpeedButtonText;
 
         [SerializeField]
+        private Button defenseButton;
+
+        [SerializeField]
+        private TMP_Text defenseButtonText;
+
+        [SerializeField]
         private Button maxHealthButton;
 
         [SerializeField]
@@ -59,6 +65,11 @@ namespace IdleGame
         public void RequestAttackSpeedUpgrade()
         {
             gameManager?.TryPurchaseUpgrade(UpgradeTrack.AttackSpeed);
+        }
+
+        public void RequestDefenseUpgrade()
+        {
+            gameManager?.TryPurchaseUpgrade(UpgradeTrack.Defense);
         }
 
         public void RequestMaxHealthUpgrade()
@@ -95,20 +106,24 @@ namespace IdleGame
             if (playerStatsText != null)
             {
                 playerStatsText.text = snapshot.Battle.PlayerAlive
-                    ? $"HP {snapshot.Battle.PlayerHealth}/{snapshot.Battle.PlayerMaxHealth} | ATK {snapshot.PlayerStats.AttackPower} | SPD {snapshot.PlayerStats.AttacksPerSecond:0.00} | M+{snapshot.MilestoneAttackBonus}"
-                    : $"HP 0/{snapshot.Battle.PlayerMaxHealth} | Down {snapshot.Battle.PlayerRespawnRemaining:0.0}s | ATK {snapshot.PlayerStats.AttackPower} | M+{snapshot.MilestoneAttackBonus}";
+                    ? $"HP {snapshot.Battle.PlayerHealth}/{snapshot.Battle.PlayerMaxHealth} | ATK {snapshot.PlayerStats.AttackPower} | SPD {snapshot.PlayerStats.AttacksPerSecond:0.00} | DEF {snapshot.PlayerStats.FlatDamageReduction} | M+{snapshot.MilestoneAttackBonus}"
+                    : $"HP 0/{snapshot.Battle.PlayerMaxHealth} | Down {snapshot.Battle.PlayerRespawnRemaining:0.0}s | ATK {snapshot.PlayerStats.AttackPower} | DEF {snapshot.PlayerStats.FlatDamageReduction}";
             }
 
             if (enemyText != null)
             {
                 var enemyPrefix = IsBossEnemy(snapshot.Battle.EnemyId) ? "Boss " : string.Empty;
+                var behaviorSuffix = string.IsNullOrWhiteSpace(snapshot.Battle.EnemyBehaviorLabel)
+                    ? string.Empty
+                    : $" {snapshot.Battle.EnemyBehaviorLabel}";
                 enemyText.text = snapshot.Battle.EnemyAlive
-                    ? $"{enemyPrefix}W{snapshot.Battle.Wave} {snapshot.Battle.EnemyId} {snapshot.Battle.EnemyHealth}/{snapshot.Battle.EnemyMaxHealth} | {snapshot.Battle.EnemyAttackPower}ATK {snapshot.Battle.EnemyAttacksPerSecond:0.00}SPD | {snapshot.Battle.EnemyGoldReward}g"
-                    : $"{enemyPrefix}W{snapshot.Battle.Wave} {snapshot.Battle.EnemyId} re {snapshot.Battle.EnemyRespawnRemaining:0.0}s | {snapshot.Battle.EnemyAttackPower}ATK {snapshot.Battle.EnemyAttacksPerSecond:0.00}SPD | {snapshot.Battle.EnemyGoldReward}g";
+                    ? $"{enemyPrefix}W{snapshot.Battle.Wave} {snapshot.Battle.EnemyId}{behaviorSuffix} {snapshot.Battle.EnemyHealth}/{snapshot.Battle.EnemyMaxHealth} | {snapshot.Battle.EnemyAttackPower}ATK {snapshot.Battle.EnemyAttacksPerSecond:0.00}SPD | {snapshot.Battle.EnemyGoldReward}g"
+                    : $"{enemyPrefix}W{snapshot.Battle.Wave} {snapshot.Battle.EnemyId}{behaviorSuffix} re {snapshot.Battle.EnemyRespawnRemaining:0.0}s | {snapshot.Battle.EnemyAttackPower}ATK {snapshot.Battle.EnemyAttacksPerSecond:0.00}SPD | {snapshot.Battle.EnemyGoldReward}g";
             }
 
             RefreshUpgradeButton(snapshot, UpgradeTrack.AttackPower, attackPowerButton, attackPowerButtonText);
             RefreshUpgradeButton(snapshot, UpgradeTrack.AttackSpeed, attackSpeedButton, attackSpeedButtonText);
+            RefreshUpgradeButton(snapshot, UpgradeTrack.Defense, defenseButton, defenseButtonText);
             RefreshUpgradeButton(snapshot, UpgradeTrack.MaxHealth, maxHealthButton, maxHealthButtonText);
         }
 
@@ -131,7 +146,7 @@ namespace IdleGame
 
             if (buttonText != null && data.HasValue)
             {
-                buttonText.text = $"{track} Lv.{data.Value.Level} ({data.Value.NextCost}g)";
+                buttonText.text = $"{GetUpgradeLabel(track)} Lv.{data.Value.Level} ({data.Value.NextCost}g)";
             }
 
             if (button != null && data.HasValue)
@@ -152,6 +167,11 @@ namespace IdleGame
                 attackSpeedButton.onClick.AddListener(RequestAttackSpeedUpgrade);
             }
 
+            if (defenseButton != null)
+            {
+                defenseButton.onClick.AddListener(RequestDefenseUpgrade);
+            }
+
             if (maxHealthButton != null)
             {
                 maxHealthButton.onClick.AddListener(RequestMaxHealthUpgrade);
@@ -168,6 +188,11 @@ namespace IdleGame
             if (attackSpeedButton != null)
             {
                 attackSpeedButton.onClick.RemoveListener(RequestAttackSpeedUpgrade);
+            }
+
+            if (defenseButton != null)
+            {
+                defenseButton.onClick.RemoveListener(RequestDefenseUpgrade);
             }
 
             if (maxHealthButton != null)
@@ -190,6 +215,18 @@ namespace IdleGame
         private static bool IsBossEnemy(string enemyId)
         {
             return !string.IsNullOrWhiteSpace(enemyId) && enemyId.StartsWith("Boss_", System.StringComparison.Ordinal);
+        }
+
+        private static string GetUpgradeLabel(UpgradeTrack track)
+        {
+            return track switch
+            {
+                UpgradeTrack.AttackPower => "Attack",
+                UpgradeTrack.MaxHealth => "Health",
+                UpgradeTrack.Defense => "Defense",
+                UpgradeTrack.AttackSpeed => "Speed",
+                _ => track.ToString(),
+            };
         }
     }
 }

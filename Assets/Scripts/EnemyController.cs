@@ -60,12 +60,39 @@ namespace IdleGame
             public float GoldMultiplier => Mathf.Max(0.1f, goldMultiplier);
         }
 
+        private sealed class BossFamilyProfile
+        {
+            public BossFamilyProfile(string familyId, string behaviorLabel, float healthMultiplier, float attackMultiplier, float attackSpeedMultiplier, float goldMultiplier)
+            {
+                FamilyId = string.IsNullOrWhiteSpace(familyId) ? "Enemy" : familyId.Trim();
+                BehaviorLabel = string.IsNullOrWhiteSpace(behaviorLabel) ? "Boss" : behaviorLabel.Trim();
+                HealthMultiplier = Mathf.Max(0.1f, healthMultiplier);
+                AttackMultiplier = Mathf.Max(0.1f, attackMultiplier);
+                AttackSpeedMultiplier = Mathf.Max(0.1f, attackSpeedMultiplier);
+                GoldMultiplier = Mathf.Max(0.1f, goldMultiplier);
+            }
+
+            public string FamilyId { get; }
+
+            public string BehaviorLabel { get; }
+
+            public float HealthMultiplier { get; }
+
+            public float AttackMultiplier { get; }
+
+            public float AttackSpeedMultiplier { get; }
+
+            public float GoldMultiplier { get; }
+        }
+
         private const int FirstWave = 1;
         private const int BossWaveInterval = 10;
-        private const float BossHealthMultiplier = 3.5f;
-        private const float BossAttackMultiplier = 1.75f;
-        private const float BossAttackSpeedMultiplier = 1.15f;
-        private const float BossGoldMultiplier = 4f;
+        private static readonly BossFamilyProfile DefaultBossProfile = new("Enemy", "Elite", 3.5f, 1.75f, 1.15f, 4f);
+        private static readonly BossFamilyProfile[] DefaultBossProfiles =
+        {
+            new("Boar", "Heavy", 4.25f, 2f, 0.72f, 3.6f),
+            new("Wisp", "Frenzy", 2.7f, 1.35f, 1.85f, 4.35f),
+        };
 
         [SerializeField]
         private string enemyId = "Slime";
@@ -115,12 +142,15 @@ namespace IdleGame
                 archetype.AttackMultiplier,
                 archetype.AttackSpeedMultiplier);
             var isBossWave = IsBossWave(normalizedWave);
+            var bossProfile = isBossWave ? GetBossProfile(archetype.EnemyId) : DefaultBossProfile;
+            var behaviorLabel = string.Empty;
             if (isBossWave)
             {
                 shapedStats = shapedStats.Multiply(
-                    BossHealthMultiplier,
-                    BossAttackMultiplier,
-                    BossAttackSpeedMultiplier);
+                    bossProfile.HealthMultiplier,
+                    bossProfile.AttackMultiplier,
+                    bossProfile.AttackSpeedMultiplier);
+                behaviorLabel = bossProfile.BehaviorLabel;
             }
 
             var enemyName = isBossWave
@@ -128,14 +158,15 @@ namespace IdleGame
                 : archetype.EnemyId;
             var reward = Mathf.Max(
                 1,
-                Mathf.RoundToInt(ScaleInt(goldReward, goldMultiplierPerWave, waveOffset) * archetype.GoldMultiplier * (isBossWave ? BossGoldMultiplier : 1f)));
+                Mathf.RoundToInt(ScaleInt(goldReward, goldMultiplierPerWave, waveOffset) * archetype.GoldMultiplier * (isBossWave ? bossProfile.GoldMultiplier : 1f)));
 
             return new EnemySpawnData(
                 normalizedWave,
                 enemyName,
                 shapedStats,
                 reward,
-                respawnDelay);
+                respawnDelay,
+                behaviorLabel);
         }
 
         private EnemyArchetypeStage GetArchetypeForWave(int wave)
@@ -211,6 +242,23 @@ namespace IdleGame
             }
 
             return $"Boss_{familyId}";
+        }
+
+        private static BossFamilyProfile GetBossProfile(string enemyArchetypeId)
+        {
+            var familyId = string.IsNullOrWhiteSpace(enemyArchetypeId)
+                ? DefaultBossProfile.FamilyId
+                : enemyArchetypeId.Trim();
+
+            foreach (var profile in DefaultBossProfiles)
+            {
+                if (string.Equals(profile.FamilyId, familyId, StringComparison.Ordinal))
+                {
+                    return profile;
+                }
+            }
+
+            return DefaultBossProfile;
         }
 
         private float ScaleAttackSpeed(float baseAttackSpeed, int waveOffset)
