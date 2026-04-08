@@ -45,6 +45,14 @@ namespace IdleGame
                 AttackPower + attackPower,
                 AttacksPerSecond + attacksPerSecond);
         }
+
+        public CombatantStats Multiply(float healthMultiplier = 1f, float attackPowerMultiplier = 1f, float attacksPerSecondMultiplier = 1f)
+        {
+            return new CombatantStats(
+                Mathf.Max(1, Mathf.RoundToInt(MaxHealth * Mathf.Max(0f, healthMultiplier))),
+                Mathf.Max(1, Mathf.RoundToInt(AttackPower * Mathf.Max(0f, attackPowerMultiplier))),
+                Mathf.Max(0.1f, AttacksPerSecond * Mathf.Max(0f, attacksPerSecondMultiplier)));
+        }
     }
 
     public sealed class CombatantRuntime

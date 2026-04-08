@@ -1,9 +1,65 @@
+using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace IdleGame
 {
     public sealed class EnemyController : MonoBehaviour
     {
+        [Serializable]
+        private sealed class EnemyArchetypeStage
+        {
+            [SerializeField, Min(1)]
+            private int startWave = EnemyController.FirstWave;
+
+            [SerializeField]
+            private string enemyId = "Slime";
+
+            [SerializeField, Min(0.1f)]
+            private float healthMultiplier = 1f;
+
+            [SerializeField, Min(0.1f)]
+            private float attackMultiplier = 1f;
+
+            [SerializeField, Min(0.1f)]
+            private float attackSpeedMultiplier = 1f;
+
+            [SerializeField, Min(0.1f)]
+            private float goldMultiplier = 1f;
+
+            public EnemyArchetypeStage()
+            {
+            }
+
+            public EnemyArchetypeStage(
+                int startWave,
+                string enemyId,
+                float healthMultiplier,
+                float attackMultiplier,
+                float attackSpeedMultiplier,
+                float goldMultiplier)
+            {
+                this.startWave = Mathf.Max(FirstWave, startWave);
+                this.enemyId = string.IsNullOrWhiteSpace(enemyId) ? "Enemy" : enemyId.Trim();
+                this.healthMultiplier = Mathf.Max(0.1f, healthMultiplier);
+                this.attackMultiplier = Mathf.Max(0.1f, attackMultiplier);
+                this.attackSpeedMultiplier = Mathf.Max(0.1f, attackSpeedMultiplier);
+                this.goldMultiplier = Mathf.Max(0.1f, goldMultiplier);
+            }
+
+            public int StartWave => Mathf.Max(FirstWave, startWave);
+
+            public string EnemyId => string.IsNullOrWhiteSpace(enemyId) ? "Enemy" : enemyId.Trim();
+
+            public float HealthMultiplier => Mathf.Max(0.1f, healthMultiplier);
+
+            public float AttackMultiplier => Mathf.Max(0.1f, attackMultiplier);
+
+            public float AttackSpeedMultiplier => Mathf.Max(0.1f, attackSpeedMultiplier);
+
+            public float GoldMultiplier => Mathf.Max(0.1f, goldMultiplier);
+        }
+
         private const int FirstWave = 1;
 
         [SerializeField]
@@ -31,6 +87,10 @@ namespace IdleGame
         [SerializeField, Min(0f)]
         private float goldMultiplierPerWave = 0.12f;
 
+        [Header("Archetype Progression")]
+        [SerializeField]
+        private List<EnemyArchetypeStage> archetypeStages = new();
+
         public EnemySpawnData CreateSpawnData()
         {
             return CreateSpawnDataForWave(FirstWave);
@@ -40,17 +100,75 @@ namespace IdleGame
         {
             var normalizedWave = Mathf.Max(FirstWave, wave);
             var waveOffset = normalizedWave - FirstWave;
-            var scaledStats = new CombatantStats(
+            var scaledBaseStats = new CombatantStats(
                 ScaleInt(baseStats.MaxHealth, healthMultiplierPerWave, waveOffset),
                 ScaleInt(baseStats.AttackPower, attackMultiplierPerWave, waveOffset),
                 ScaleAttackSpeed(baseStats.AttacksPerSecond, waveOffset));
+            var archetype = GetArchetypeForWave(normalizedWave);
+            var shapedStats = scaledBaseStats.Multiply(
+                archetype.HealthMultiplier,
+                archetype.AttackMultiplier,
+                archetype.AttackSpeedMultiplier);
 
             return new EnemySpawnData(
                 normalizedWave,
-                enemyId,
-                scaledStats,
-                ScaleInt(goldReward, goldMultiplierPerWave, waveOffset),
+                archetype.EnemyId,
+                shapedStats,
+                Mathf.Max(1, Mathf.RoundToInt(ScaleInt(goldReward, goldMultiplierPerWave, waveOffset) * archetype.GoldMultiplier)),
                 respawnDelay);
+        }
+
+        private EnemyArchetypeStage GetArchetypeForWave(int wave)
+        {
+            var stages = GetOrderedArchetypes();
+            var selected = stages[0];
+
+            for (var index = 1; index < stages.Count; index++)
+            {
+                if (wave < stages[index].StartWave)
+                {
+                    break;
+                }
+
+                selected = stages[index];
+            }
+
+            return selected;
+        }
+
+        private List<EnemyArchetypeStage> GetOrderedArchetypes()
+        {
+            if (archetypeStages == null || archetypeStages.Count == 0)
+            {
+                return BuildDefaultArchetypes();
+            }
+
+            var validStages = new List<EnemyArchetypeStage>();
+            foreach (var stage in archetypeStages)
+            {
+                if (stage != null)
+                {
+                    validStages.Add(stage);
+                }
+            }
+
+            if (validStages.Count == 0)
+            {
+                return BuildDefaultArchetypes();
+            }
+
+            validStages.Sort((left, right) => left.StartWave.CompareTo(right.StartWave));
+            return validStages;
+        }
+
+        private List<EnemyArchetypeStage> BuildDefaultArchetypes()
+        {
+            return new List<EnemyArchetypeStage>
+            {
+                new EnemyArchetypeStage(FirstWave, enemyId, 1f, 1f, 1f, 1f),
+                new EnemyArchetypeStage(10, "Boar", 1.6f, 1.15f, 0.8f, 1.15f),
+                new EnemyArchetypeStage(20, "Wisp", 1.15f, 1.45f, 1.45f, 1.35f),
+            };
         }
 
         private static int ScaleInt(int baseValue, float multiplierPerWave, int waveOffset)
