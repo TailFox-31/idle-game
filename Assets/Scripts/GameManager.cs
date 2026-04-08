@@ -69,6 +69,27 @@ namespace IdleGame
 
     public sealed class GameManager : MonoBehaviour
     {
+        [Serializable]
+        private sealed class SaveData
+        {
+            public int gold;
+            public int wave = 1;
+            public int lastClaimedMilestoneWave;
+            public int lastMilestoneGoldReward;
+            public int lastMilestoneAttackReward;
+            public int milestoneAttackBonus;
+            public List<UpgradeSaveData> upgrades = new();
+        }
+
+        [Serializable]
+        private sealed class UpgradeSaveData
+        {
+            public UpgradeTrack track;
+            public int level;
+        }
+
+        private const string SaveKey = "IdleGame.PrototypeSave";
+
         [SerializeField]
         private CombatantStats playerBaseStats = new CombatantStats(30, 2, 1f);
 
@@ -121,9 +142,9 @@ namespace IdleGame
 
         private void Awake()
         {
-            gold = Mathf.Max(0, startingGold);
             EnsureUpgradeDefinitions();
             InitializeUpgradeStates();
+            LoadProgressOrInitializeDefaults();
             InitializeBattleSystem();
 
             if (uiBinder != null)
@@ -157,8 +178,17 @@ namespace IdleGame
             }
 
             battleSystem?.SetPlayerStats(BuildPlayerStats());
+            SaveProgress();
             PublishState();
             return true;
+        }
+
+        public void ResetSavedProgress()
+        {
+            DeleteSavedProgress();
+            ApplyFreshState();
+            RebuildBattleState();
+            PublishState();
         }
 
         private void InitializeUpgradeStates()
@@ -173,6 +203,65 @@ namespace IdleGame
                 }
 
                 upgradeStates.Add(definition.Track, new UpgradeState(definition));
+            }
+        }
+
+        private void LoadProgressOrInitializeDefaults()
+        {
+            ApplyFreshState();
+
+            if (!PlayerPrefs.HasKey(SaveKey))
+            {
+                return;
+            }
+
+            var raw = PlayerPrefs.GetString(SaveKey, string.Empty);
+            if (string.IsNullOrWhiteSpace(raw))
+            {
+                return;
+            }
+
+            var saveData = JsonUtility.FromJson<SaveData>(raw);
+            if (saveData == null)
+            {
+                return;
+            }
+
+            gold = Mathf.Max(0, saveData.gold);
+            currentWave = Mathf.Max(1, saveData.wave);
+            lastClaimedMilestoneWave = Mathf.Max(0, saveData.lastClaimedMilestoneWave);
+            lastMilestoneGoldReward = Mathf.Max(0, saveData.lastMilestoneGoldReward);
+            lastMilestoneAttackReward = Mathf.Max(0, saveData.lastMilestoneAttackReward);
+            milestoneAttackBonus = Mathf.Max(0, saveData.milestoneAttackBonus);
+
+            if (saveData.upgrades == null)
+            {
+                return;
+            }
+
+            foreach (var entry in saveData.upgrades)
+            {
+                if (entry == null || !upgradeStates.TryGetValue(entry.track, out var state))
+                {
+                    continue;
+                }
+
+                state.SetLevel(entry.level);
+            }
+        }
+
+        private void ApplyFreshState()
+        {
+            gold = Mathf.Max(0, startingGold);
+            currentWave = 1;
+            lastClaimedMilestoneWave = 0;
+            lastMilestoneGoldReward = 0;
+            lastMilestoneAttackReward = 0;
+            milestoneAttackBonus = 0;
+
+            foreach (var state in upgradeStates.Values)
+            {
+                state.SetLevel(0);
             }
         }
 
@@ -271,6 +360,23 @@ namespace IdleGame
             battleSystem.BattleStateChanged += _ => PublishState();
         }
 
+        private void RebuildBattleState()
+        {
+            if (enemyController == null)
+            {
+                return;
+            }
+
+            if (battleSystem == null)
+            {
+                InitializeBattleSystem();
+                return;
+            }
+
+            battleSystem.SetPlayerStats(BuildPlayerStats());
+            battleSystem.SetEnemy(enemyController.CreateSpawnDataForWave(currentWave));
+        }
+
         private CombatantStats BuildPlayerStats()
         {
             var stats = playerBaseStats;
@@ -311,6 +417,7 @@ namespace IdleGame
         private void HandleGoldAwarded(int amount)
         {
             gold += Mathf.Max(0, amount);
+            SaveProgress();
             PublishState();
         }
 
@@ -324,6 +431,7 @@ namespace IdleGame
             currentWave = Mathf.Max(currentWave, defeatedEnemy.Wave) + 1;
             TryGrantMilestoneReward(currentWave);
             battleSystem?.QueueEnemy(enemyController.CreateSpawnDataForWave(currentWave));
+            SaveProgress();
             PublishState();
         }
 
@@ -382,10 +490,42 @@ namespace IdleGame
             }
         }
 
+        private void SaveProgress()
+        {
+            var saveData = new SaveData
+            {
+                gold = gold,
+                wave = currentWave,
+                lastClaimedMilestoneWave = lastClaimedMilestoneWave,
+                lastMilestoneGoldReward = lastMilestoneGoldReward,
+                lastMilestoneAttackReward = lastMilestoneAttackReward,
+                milestoneAttackBonus = milestoneAttackBonus,
+            };
+
+            foreach (var state in upgradeStates.Values)
+            {
+                saveData.upgrades.Add(new UpgradeSaveData
+                {
+                    track = state.Definition.Track,
+                    level = state.Level,
+                });
+            }
+
+            PlayerPrefs.SetString(SaveKey, JsonUtility.ToJson(saveData));
+            PlayerPrefs.Save();
+        }
+
+        private static void DeleteSavedProgress()
+        {
+            PlayerPrefs.DeleteKey(SaveKey);
+            PlayerPrefs.Save();
+        }
+
 #if UNITY_EDITOR
         public void EditorGrantGold(int amount)
         {
             gold += Mathf.Max(0, amount);
+            SaveProgress();
             PublishState();
         }
 
@@ -404,6 +544,7 @@ namespace IdleGame
             currentWave = Mathf.Max(1, targetWave);
             GrantMilestonesUpToWave(currentWave);
             battleSystem.SetEnemy(enemyController.CreateSpawnDataForWave(currentWave));
+            SaveProgress();
             PublishState();
         }
 #endif

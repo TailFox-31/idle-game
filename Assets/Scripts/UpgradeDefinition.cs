@@ -108,5 +108,10 @@ namespace IdleGame
             Level++;
             return true;
         }
+
+        public void SetLevel(int level)
+        {
+            Level = Mathf.Max(0, level);
+        }
     }
 }

@@ -41,6 +41,11 @@ namespace IdleGame
         [SerializeField]
         private TMP_Text maxHealthButtonText;
 
+        [Header("Meta")]
+        [SerializeField]
+        private Button resetSaveButton;
+
+        private bool ownsRuntimeResetButton;
         private GameManager gameManager;
 
 #if UNITY_EDITOR
@@ -81,8 +86,14 @@ namespace IdleGame
             gameManager?.TryPurchaseUpgrade(UpgradeTrack.MaxHealth);
         }
 
+        public void RequestResetSave()
+        {
+            gameManager?.ResetSavedProgress();
+        }
+
         private void OnEnable()
         {
+            EnsureResetSaveButton();
             RegisterButtons();
         }
 
@@ -93,6 +104,7 @@ namespace IdleGame
 
         private void OnDestroy()
         {
+            DestroyRuntimeResetButton();
             Unbind();
         }
 
@@ -217,6 +229,11 @@ namespace IdleGame
             {
                 maxHealthButton.onClick.AddListener(RequestMaxHealthUpgrade);
             }
+
+            if (resetSaveButton != null)
+            {
+                resetSaveButton.onClick.AddListener(RequestResetSave);
+            }
         }
 
         private void UnregisterButtons()
@@ -240,6 +257,11 @@ namespace IdleGame
             {
                 maxHealthButton.onClick.RemoveListener(RequestMaxHealthUpgrade);
             }
+
+            if (resetSaveButton != null)
+            {
+                resetSaveButton.onClick.RemoveListener(RequestResetSave);
+            }
         }
 
         private void Unbind()
@@ -251,6 +273,72 @@ namespace IdleGame
 
             gameManager.StateChanged -= Refresh;
             gameManager = null;
+        }
+
+        private void EnsureResetSaveButton()
+        {
+            if (resetSaveButton != null || enemyText == null)
+            {
+                return;
+            }
+
+            var parent = enemyText.rectTransform.parent as RectTransform;
+            if (parent == null)
+            {
+                return;
+            }
+
+            var buttonObject = new GameObject("RuntimeResetSaveButton", typeof(RectTransform), typeof(Image), typeof(Button));
+            buttonObject.transform.SetParent(parent, false);
+
+            var rectTransform = buttonObject.GetComponent<RectTransform>();
+            rectTransform.anchorMin = new Vector2(1f, 1f);
+            rectTransform.anchorMax = new Vector2(1f, 1f);
+            rectTransform.pivot = new Vector2(1f, 1f);
+            rectTransform.sizeDelta = new Vector2(180f, 44f);
+            rectTransform.anchoredPosition = new Vector2(-20f, -66f);
+
+            var image = buttonObject.GetComponent<Image>();
+            image.color = new Color32(122, 54, 54, 220);
+
+            resetSaveButton = buttonObject.GetComponent<Button>();
+            resetSaveButton.targetGraphic = image;
+
+            var labelObject = new GameObject("Label", typeof(RectTransform), typeof(TextMeshProUGUI));
+            labelObject.transform.SetParent(buttonObject.transform, false);
+
+            var labelRect = labelObject.GetComponent<RectTransform>();
+            labelRect.anchorMin = Vector2.zero;
+            labelRect.anchorMax = Vector2.one;
+            labelRect.offsetMin = new Vector2(14f, 8f);
+            labelRect.offsetMax = new Vector2(-14f, -8f);
+
+            var label = labelObject.GetComponent<TextMeshProUGUI>();
+            label.text = "Reset Save";
+            label.fontSize = 20f;
+            label.alignment = TextAlignmentOptions.Center;
+            label.enableWordWrapping = false;
+            label.color = Color.white;
+            label.richText = false;
+
+            if (label.font == null && TMP_Settings.defaultFontAsset != null)
+            {
+                label.font = TMP_Settings.defaultFontAsset;
+            }
+
+            ownsRuntimeResetButton = true;
+        }
+
+        private void DestroyRuntimeResetButton()
+        {
+            if (!ownsRuntimeResetButton || resetSaveButton == null)
+            {
+                return;
+            }
+
+            Destroy(resetSaveButton.gameObject);
+            resetSaveButton = null;
+            ownsRuntimeResetButton = false;
         }
 
         private static bool IsBossEnemy(string enemyId)

@@ -23,6 +23,7 @@ public static class IdleGamePrototypeSceneBuilder
     private const string AttackSpeedButtonName = "AttackSpeedUpgradeButton";
     private const string DefenseButtonName = "DefenseUpgradeButton";
     private const string MaxHealthButtonName = "MaxHealthUpgradeButton";
+    private const string ResetSaveButtonName = "ResetSaveButton";
     private const string LabelChildName = "Label";
     private const string GameManagerName = "GameManager";
     private const string EnemyControllerName = "EnemyController";
@@ -57,6 +58,8 @@ public static class IdleGamePrototypeSceneBuilder
         var playerStatsReadout = EnsureReadout(headerPanel, PlayerStatsReadoutName, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(20f, -66f), "ATK 0 | SPD 0.00 | DEF 0");
         var enemyStatusReadout = EnsureReadout(headerPanel, EnemyStatusReadoutName, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-20f, -20f), "Enemy HP 0/0");
         enemyStatusReadout.alignment = TextAlignmentOptions.TopRight;
+        var resetSaveButton = EnsureButton(headerPanel, ResetSaveButtonName, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-20f, -66f), "Reset Save", new Vector2(180f, 44f), 20f);
+        resetSaveButton.GetComponent<Image>().color = new Color32(122, 54, 54, 220);
 
         var upgradesPanel = EnsureChildRectTransform(uiRoot, UpgradesPanelName);
         ConfigureUpgradePanel(upgradesPanel);
@@ -78,7 +81,7 @@ public static class IdleGamePrototypeSceneBuilder
         var uiBinder = EnsureComponent<UIBinder>(uiBinderObject);
 
         WireGameManager(gameManager, enemyController, uiBinder);
-        WireUiBinder(uiBinder, goldReadout, playerStatsReadout, enemyStatusReadout, attackPowerButton, maxHealthButton, defenseButton, attackSpeedButton);
+        WireUiBinder(uiBinder, goldReadout, playerStatsReadout, enemyStatusReadout, attackPowerButton, maxHealthButton, defenseButton, attackSpeedButton, resetSaveButton);
 
         EditorSceneManager.MarkSceneDirty(scene);
         Selection.activeGameObject = systemsRoot;
@@ -163,7 +166,8 @@ public static class IdleGamePrototypeSceneBuilder
         Button attackPowerButton,
         Button maxHealthButton,
         Button defenseButton,
-        Button attackSpeedButton)
+        Button attackSpeedButton,
+        Button resetSaveButton)
     {
         var serializedObject = new SerializedObject(uiBinder);
         SetObjectReference(serializedObject, "goldText", goldReadout);
@@ -177,6 +181,7 @@ public static class IdleGamePrototypeSceneBuilder
         SetObjectReference(serializedObject, "defenseButtonText", GetButtonLabel(defenseButton));
         SetObjectReference(serializedObject, "attackSpeedButton", attackSpeedButton);
         SetObjectReference(serializedObject, "attackSpeedButtonText", GetButtonLabel(attackSpeedButton));
+        SetObjectReference(serializedObject, "resetSaveButton", resetSaveButton);
         serializedObject.ApplyModifiedPropertiesWithoutUndo();
         EditorUtility.SetDirty(uiBinder);
     }
@@ -244,13 +249,15 @@ public static class IdleGamePrototypeSceneBuilder
         Vector2 anchorMin,
         Vector2 anchorMax,
         Vector2 anchoredPosition,
-        string labelText)
+        string labelText,
+        Vector2? sizeDelta = null,
+        float fontSize = 24f)
     {
         var buttonTransform = EnsureChildRectTransform(parent, name);
         buttonTransform.anchorMin = anchorMin;
         buttonTransform.anchorMax = anchorMax;
-        buttonTransform.pivot = new Vector2(0f, 1f);
-        buttonTransform.sizeDelta = new Vector2(320f, 58f);
+        buttonTransform.pivot = new Vector2(anchorMax.x, anchorMax.y);
+        buttonTransform.sizeDelta = sizeDelta ?? new Vector2(320f, 58f);
         buttonTransform.anchoredPosition = anchoredPosition;
 
         var image = EnsureComponent<Image>(buttonTransform.gameObject);
@@ -264,7 +271,7 @@ public static class IdleGamePrototypeSceneBuilder
 
         var label = EnsureComponent<TextMeshProUGUI>(labelTransform.gameObject);
         label.text = labelText;
-        label.fontSize = 24f;
+        label.fontSize = fontSize;
         label.alignment = TextAlignmentOptions.Center;
         label.enableWordWrapping = false;
         label.color = new Color32(255, 255, 255, 255);
