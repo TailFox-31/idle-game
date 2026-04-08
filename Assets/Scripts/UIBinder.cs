@@ -70,6 +70,7 @@ namespace IdleGame
         private bool ownsRuntimeResetButton;
         private bool ownsRuntimeWaveTravelControls;
         private GameManager gameManager;
+        private static readonly Color32 TravelTargetHighlightColor = new(255, 214, 102, 255);
 
 #if UNITY_EDITOR
         private string editorJumpWaveText = "20";
@@ -250,7 +251,7 @@ namespace IdleGame
                 {
                     travelButtonText.text = canTravel
                         ? $"Travel to W{snapshot.SelectedStartWave}"
-                        : $"At W{snapshot.Wave}";
+                        : $"Already at W{snapshot.Wave}";
                 }
             }
         }
@@ -474,7 +475,7 @@ namespace IdleGame
             panelRect.sizeDelta = new Vector2(360f, 96f);
             panelRect.anchoredPosition = new Vector2(-20f, -122f);
 
-            startWaveText = CreateTravelLabel(panelRect, "StartWaveLabel", "Current W1 | Start W1 | Max W1");
+            startWaveText = CreateTravelLabel(panelRect, "StartWaveLabel", "Now W1 | Target W1 | Best W1");
             previousWaveButton = CreateTravelButton(panelRect, "PrevWaveButton", new Vector2(0f, -42f), new Vector2(84f, 44f), "Prev");
             nextWaveButton = CreateTravelButton(panelRect, "NextWaveButton", new Vector2(92f, -42f), new Vector2(84f, 44f), "Next");
             travelButton = CreateTravelButton(panelRect, "TravelWaveButton", new Vector2(184f, -42f), new Vector2(176f, 44f), "Travel to W1");
@@ -533,7 +534,7 @@ namespace IdleGame
             label.alignment = TextAlignmentOptions.MidlineRight;
             label.enableWordWrapping = false;
             label.color = Color.white;
-            label.richText = false;
+            label.richText = true;
 
             if (label.font == null && TMP_Settings.defaultFontAsset != null)
             {
@@ -599,7 +600,16 @@ namespace IdleGame
 
         private static string BuildWaveTravelReadout(GameSnapshot snapshot)
         {
-            return $"Current W{snapshot.Wave} | Start W{snapshot.SelectedStartWave} | Max W{snapshot.HighestWaveReached}";
+            var nowText = $"Now W{snapshot.Wave}";
+            var bestText = $"Best W{snapshot.HighestWaveReached}";
+
+            if (snapshot.SelectedStartWave == snapshot.Wave)
+            {
+                return $"{nowText} | Target W{snapshot.SelectedStartWave} | {bestText}";
+            }
+
+            var targetColor = ColorUtility.ToHtmlStringRGB(TravelTargetHighlightColor);
+            return $"{nowText} -> <color=#{targetColor}>Target W{snapshot.SelectedStartWave}</color> | {bestText}";
         }
 
         private static bool IsBossEnemy(string enemyId)
