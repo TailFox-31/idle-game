@@ -139,6 +139,7 @@ namespace IdleGame
         {
             EnsureResetSaveButton();
             EnsureWaveTravelControls();
+            ConfigureWaveTravelReadout();
             RegisterButtons();
         }
 
@@ -224,6 +225,7 @@ namespace IdleGame
 
             if (startWaveText != null)
             {
+                ConfigureWaveTravelReadout();
                 startWaveText.text = BuildWaveTravelReadout(snapshot);
             }
 
@@ -472,13 +474,13 @@ namespace IdleGame
             panelRect.anchorMin = new Vector2(1f, 1f);
             panelRect.anchorMax = new Vector2(1f, 1f);
             panelRect.pivot = new Vector2(1f, 1f);
-            panelRect.sizeDelta = new Vector2(360f, 96f);
+            panelRect.sizeDelta = new Vector2(360f, 118f);
             panelRect.anchoredPosition = new Vector2(-20f, -122f);
 
-            startWaveText = CreateTravelLabel(panelRect, "StartWaveLabel", "Now W1 | Target W1 | Best W1");
-            previousWaveButton = CreateTravelButton(panelRect, "PrevWaveButton", new Vector2(0f, -42f), new Vector2(84f, 44f), "Prev");
-            nextWaveButton = CreateTravelButton(panelRect, "NextWaveButton", new Vector2(92f, -42f), new Vector2(84f, 44f), "Next");
-            travelButton = CreateTravelButton(panelRect, "TravelWaveButton", new Vector2(184f, -42f), new Vector2(176f, 44f), "Travel to W1");
+            startWaveText = CreateTravelLabel(panelRect, "StartWaveLabel", "Now W1\nTarget W1 | Best W1");
+            previousWaveButton = CreateTravelButton(panelRect, "PrevWaveButton", new Vector2(0f, -64f), new Vector2(84f, 44f), "Prev");
+            nextWaveButton = CreateTravelButton(panelRect, "NextWaveButton", new Vector2(92f, -64f), new Vector2(84f, 44f), "Next");
+            travelButton = CreateTravelButton(panelRect, "TravelWaveButton", new Vector2(184f, -64f), new Vector2(176f, 44f), "Travel to W1");
             travelButtonText = GetButtonLabel(travelButton);
 
             ownsRuntimeWaveTravelControls = true;
@@ -525,13 +527,13 @@ namespace IdleGame
             var rectTransform = labelObject.GetComponent<RectTransform>();
             rectTransform.anchorMin = new Vector2(0f, 1f);
             rectTransform.anchorMax = new Vector2(1f, 1f);
-            rectTransform.offsetMin = new Vector2(0f, -30f);
+            rectTransform.offsetMin = new Vector2(0f, -52f);
             rectTransform.offsetMax = Vector2.zero;
 
             var label = labelObject.GetComponent<TextMeshProUGUI>();
             label.text = text;
-            label.fontSize = 22f;
-            label.alignment = TextAlignmentOptions.MidlineRight;
+            label.fontSize = 20f;
+            label.alignment = TextAlignmentOptions.TopRight;
             label.enableWordWrapping = false;
             label.color = Color.white;
             label.richText = true;
@@ -542,6 +544,23 @@ namespace IdleGame
             }
 
             return label;
+        }
+
+        private void ConfigureWaveTravelReadout()
+        {
+            if (startWaveText == null)
+            {
+                return;
+            }
+
+            startWaveText.richText = true;
+            startWaveText.enableWordWrapping = false;
+            startWaveText.alignment = TextAlignmentOptions.TopRight;
+
+            if (startWaveText.rectTransform != null)
+            {
+                startWaveText.rectTransform.sizeDelta = new Vector2(360f, 52f);
+            }
         }
 
         private static Button CreateTravelButton(RectTransform parent, string name, Vector2 anchoredPosition, Vector2 sizeDelta, string labelText)
@@ -602,14 +621,15 @@ namespace IdleGame
         {
             var nowText = $"Now W{snapshot.Wave}";
             var bestText = $"Best W{snapshot.HighestWaveReached}";
+            var targetText = $"Target W{snapshot.SelectedStartWave}";
 
             if (snapshot.SelectedStartWave == snapshot.Wave)
             {
-                return $"{nowText} | Target W{snapshot.SelectedStartWave} | {bestText}";
+                return $"{nowText}\n{targetText} | {bestText}";
             }
 
             var targetColor = ColorUtility.ToHtmlStringRGB(TravelTargetHighlightColor);
-            return $"{nowText} -> <color=#{targetColor}>Target W{snapshot.SelectedStartWave}</color> | {bestText}";
+            return $"{nowText}\n<color=#{targetColor}>{targetText}</color> | {bestText}";
         }
 
         private static bool IsBossEnemy(string enemyId)

@@ -68,14 +68,14 @@ public static class IdleGamePrototypeSceneBuilder
         resetSaveButton.GetComponent<Image>().color = new Color32(122, 54, 54, 220);
         var waveTravelPanel = EnsureChildRectTransform(headerPanel, WaveTravelPanelName);
         ConfigureWaveTravelPanel(waveTravelPanel);
-        var startWaveReadout = EnsureReadout(waveTravelPanel, StartWaveReadoutName, new Vector2(0f, 1f), new Vector2(1f, 1f), Vector2.zero, "Now W1 | Target W1 | Best W1");
-        startWaveReadout.rectTransform.sizeDelta = new Vector2(360f, 30f);
-        startWaveReadout.alignment = TextAlignmentOptions.MidlineRight;
-        startWaveReadout.fontSize = 22f;
+        var startWaveReadout = EnsureReadout(waveTravelPanel, StartWaveReadoutName, new Vector2(0f, 1f), new Vector2(1f, 1f), Vector2.zero, "Now W1\nTarget W1 | Best W1");
+        startWaveReadout.rectTransform.sizeDelta = new Vector2(360f, 52f);
+        startWaveReadout.alignment = TextAlignmentOptions.TopRight;
+        startWaveReadout.fontSize = 20f;
         startWaveReadout.richText = true;
-        var previousWaveButton = EnsureButton(waveTravelPanel, PreviousWaveButtonName, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, -42f), "Prev", new Vector2(84f, 44f), 20f);
-        var nextWaveButton = EnsureButton(waveTravelPanel, NextWaveButtonName, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(92f, -42f), "Next", new Vector2(84f, 44f), 20f);
-        var travelButton = EnsureButton(waveTravelPanel, TravelButtonName, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(184f, -42f), "Travel to W1", new Vector2(176f, 44f), 18f);
+        var previousWaveButton = EnsureButton(waveTravelPanel, PreviousWaveButtonName, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, -64f), "Prev", new Vector2(84f, 44f), 20f);
+        var nextWaveButton = EnsureButton(waveTravelPanel, NextWaveButtonName, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(92f, -64f), "Next", new Vector2(84f, 44f), 20f);
+        var travelButton = EnsureButton(waveTravelPanel, TravelButtonName, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(184f, -64f), "Travel to W1", new Vector2(176f, 44f), 18f);
 
         var upgradesPanel = EnsureChildRectTransform(uiRoot, UpgradesPanelName);
         ConfigureUpgradePanel(upgradesPanel);
@@ -334,7 +334,7 @@ public static class IdleGamePrototypeSceneBuilder
         rectTransform.anchorMax = new Vector2(1f, 1f);
         rectTransform.pivot = new Vector2(1f, 1f);
         rectTransform.anchoredPosition = new Vector2(-20f, -122f);
-        rectTransform.sizeDelta = new Vector2(360f, 96f);
+        rectTransform.sizeDelta = new Vector2(360f, 118f);
     }
 
     private static void ConfigureUpgradePanel(RectTransform rectTransform)
