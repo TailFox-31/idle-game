@@ -5,13 +5,16 @@ namespace IdleGame
 {
     public readonly struct EnemySpawnData
     {
-        public EnemySpawnData(string enemyId, CombatantStats stats, int goldReward, float respawnDelay)
+        public EnemySpawnData(int wave, string enemyId, CombatantStats stats, int goldReward, float respawnDelay)
         {
+            Wave = Mathf.Max(1, wave);
             EnemyId = enemyId;
             Stats = stats;
             GoldReward = Mathf.Max(0, goldReward);
             RespawnDelay = Mathf.Max(0f, respawnDelay);
         }
+
+        public int Wave { get; }
 
         public string EnemyId { get; }
 
@@ -25,6 +28,7 @@ namespace IdleGame
     public readonly struct BattleSnapshot
     {
         public BattleSnapshot(
+            int wave,
             string enemyId,
             int playerHealth,
             int playerMaxHealth,
@@ -32,9 +36,13 @@ namespace IdleGame
             float playerRespawnRemaining,
             int enemyHealth,
             int enemyMaxHealth,
+            int enemyAttackPower,
+            float enemyAttacksPerSecond,
+            int enemyGoldReward,
             bool enemyAlive,
             float enemyRespawnRemaining)
         {
+            Wave = wave;
             EnemyId = enemyId;
             PlayerHealth = playerHealth;
             PlayerMaxHealth = playerMaxHealth;
@@ -42,9 +50,14 @@ namespace IdleGame
             PlayerRespawnRemaining = playerRespawnRemaining;
             EnemyHealth = enemyHealth;
             EnemyMaxHealth = enemyMaxHealth;
+            EnemyAttackPower = enemyAttackPower;
+            EnemyAttacksPerSecond = enemyAttacksPerSecond;
+            EnemyGoldReward = enemyGoldReward;
             EnemyAlive = enemyAlive;
             EnemyRespawnRemaining = enemyRespawnRemaining;
         }
+
+        public int Wave { get; }
 
         public string EnemyId { get; }
 
@@ -62,6 +75,12 @@ namespace IdleGame
 
         public int EnemyMaxHealth { get; }
 
+        public int EnemyAttackPower { get; }
+
+        public float EnemyAttacksPerSecond { get; }
+
+        public int EnemyGoldReward { get; }
+
         public bool EnemyAlive { get; }
 
         public float EnemyRespawnRemaining { get; }
@@ -73,7 +92,9 @@ namespace IdleGame
         private readonly CombatantRuntime enemy;
         private readonly float playerRespawnDelay;
         private EnemySpawnData enemySpawnData;
+        private EnemySpawnData queuedEnemySpawnData;
         private float enemyRespawnRemaining;
+        private bool hasQueuedEnemy;
         private float playerRespawnRemaining;
 
         public AutoBattleSystem(CombatantStats playerStats, EnemySpawnData initialEnemy, float playerRespawnDelay)
@@ -87,6 +108,8 @@ namespace IdleGame
         public event Action<BattleSnapshot> BattleStateChanged;
 
         public event Action<int> GoldAwarded;
+
+        public event Action<EnemySpawnData> EnemyDefeated;
 
         public BattleSnapshot Snapshot => BuildSnapshot();
 
@@ -112,8 +135,17 @@ namespace IdleGame
         public void SetEnemy(EnemySpawnData spawnData)
         {
             enemySpawnData = spawnData;
+            queuedEnemySpawnData = default;
+            hasQueuedEnemy = false;
             enemyRespawnRemaining = 0f;
             enemy.Reset(spawnData.Stats);
+            PublishState();
+        }
+
+        public void QueueEnemy(EnemySpawnData spawnData)
+        {
+            queuedEnemySpawnData = spawnData;
+            hasQueuedEnemy = true;
             PublishState();
         }
 
@@ -130,6 +162,13 @@ namespace IdleGame
                 playerRespawnRemaining = Mathf.Max(0f, playerRespawnRemaining - deltaTime);
                 if (playerRespawnRemaining <= 0f)
                 {
+                    if (hasQueuedEnemy)
+                    {
+                        enemySpawnData = queuedEnemySpawnData;
+                        queuedEnemySpawnData = default;
+                        hasQueuedEnemy = false;
+                    }
+
                     player.Reset(player.Stats);
                     enemy.Reset(enemySpawnData.Stats);
                     enemyRespawnRemaining = 0f;
@@ -141,6 +180,13 @@ namespace IdleGame
                 enemyRespawnRemaining = Mathf.Max(0f, enemyRespawnRemaining - deltaTime);
                 if (enemyRespawnRemaining <= 0f)
                 {
+                    if (hasQueuedEnemy)
+                    {
+                        enemySpawnData = queuedEnemySpawnData;
+                        queuedEnemySpawnData = default;
+                        hasQueuedEnemy = false;
+                    }
+
                     enemy.Reset(enemySpawnData.Stats);
                     changed = true;
                 }
@@ -163,6 +209,7 @@ namespace IdleGame
                     {
                         enemyRespawnRemaining = enemySpawnData.RespawnDelay;
                         GoldAwarded?.Invoke(enemySpawnData.GoldReward);
+                        EnemyDefeated?.Invoke(enemySpawnData);
                     }
                 }
 
@@ -186,14 +233,22 @@ namespace IdleGame
 
         private BattleSnapshot BuildSnapshot()
         {
+            var displayedEnemy = !enemy.IsAlive && hasQueuedEnemy
+                ? queuedEnemySpawnData
+                : enemySpawnData;
+
             return new BattleSnapshot(
-                enemySpawnData.EnemyId,
+                displayedEnemy.Wave,
+                displayedEnemy.EnemyId,
                 player.CurrentHealth,
                 player.Stats.MaxHealth,
                 player.IsAlive,
                 playerRespawnRemaining,
                 enemy.CurrentHealth,
-                enemy.Stats.MaxHealth,
+                displayedEnemy.Stats.MaxHealth,
+                displayedEnemy.Stats.AttackPower,
+                displayedEnemy.Stats.AttacksPerSecond,
+                displayedEnemy.GoldReward,
                 enemy.IsAlive,
                 enemyRespawnRemaining);
         }

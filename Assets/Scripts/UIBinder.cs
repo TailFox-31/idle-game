@@ -74,7 +74,7 @@ namespace IdleGame
         {
             if (goldText != null)
             {
-                goldText.text = $"Gold: {snapshot.Gold}";
+                goldText.text = $"Gold: {snapshot.Gold} | Wave {snapshot.Wave}";
             }
 
             if (playerStatsText != null)
@@ -87,8 +87,8 @@ namespace IdleGame
             if (enemyText != null)
             {
                 enemyText.text = snapshot.Battle.EnemyAlive
-                    ? $"{snapshot.Battle.EnemyId} HP {snapshot.Battle.EnemyHealth}/{snapshot.Battle.EnemyMaxHealth}"
-                    : $"{snapshot.Battle.EnemyId} respawns in {snapshot.Battle.EnemyRespawnRemaining:0.0}s";
+                    ? $"Wave {snapshot.Battle.Wave} {snapshot.Battle.EnemyId} HP {snapshot.Battle.EnemyHealth}/{snapshot.Battle.EnemyMaxHealth} | ATK {snapshot.Battle.EnemyAttackPower} | SPD {snapshot.Battle.EnemyAttacksPerSecond:0.00} | Gold {snapshot.Battle.EnemyGoldReward}"
+                    : $"Wave {snapshot.Battle.Wave} {snapshot.Battle.EnemyId} in {snapshot.Battle.EnemyRespawnRemaining:0.0}s | HP {snapshot.Battle.EnemyMaxHealth} | ATK {snapshot.Battle.EnemyAttackPower} | SPD {snapshot.Battle.EnemyAttacksPerSecond:0.00} | Gold {snapshot.Battle.EnemyGoldReward}";
             }
 
             RefreshUpgradeButton(snapshot, UpgradeTrack.AttackPower, attackPowerButton, attackPowerButtonText);
