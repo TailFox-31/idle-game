@@ -6,11 +6,12 @@ namespace IdleGame
 {
     public readonly struct UpgradeViewData
     {
-        public UpgradeViewData(UpgradeTrack track, int level, int nextCost)
+        public UpgradeViewData(UpgradeTrack track, int level, int nextCost, float goldGainMultiplier)
         {
             Track = track;
             Level = level;
             NextCost = nextCost;
+            GoldGainMultiplier = goldGainMultiplier;
         }
 
         public UpgradeTrack Track { get; }
@@ -18,6 +19,8 @@ namespace IdleGame
         public int Level { get; }
 
         public int NextCost { get; }
+
+        public float GoldGainMultiplier { get; }
     }
 
     public readonly struct GameSnapshot
@@ -260,82 +263,48 @@ namespace IdleGame
 
         private void EnsureUpgradeDefinitions()
         {
-            if (HasExpectedUpgradeTracks(upgrades))
-            {
-                return;
-            }
-
-            upgrades = BuildDefaultUpgradeDefinitions();
+            upgrades = BuildNormalizedUpgradeDefinitions(upgrades);
         }
 
-        private static bool HasExpectedUpgradeTracks(List<UpgradeDefinition> definitions)
+        private static List<UpgradeDefinition> BuildNormalizedUpgradeDefinitions(List<UpgradeDefinition> definitions)
         {
-            if (definitions == null || definitions.Count != 5)
+            var normalized = BuildDefaultUpgradeDefinitions();
+            if (definitions == null)
             {
-                return false;
+                return normalized;
             }
 
-            var seenAttackPower = false;
-            var seenMaxHealth = false;
-            var seenDefense = false;
-            var seenAttackSpeed = false;
-            var seenGoldGain = false;
-
-            foreach (var definition in definitions)
+            for (var i = 0; i < definitions.Count; i++)
             {
-                if (definition == null)
+                var candidate = definitions[i];
+                if (candidate == null)
                 {
-                    return false;
+                    continue;
                 }
 
-                switch (definition.Track)
+                var normalizedIndex = GetDefinitionIndex(normalized, candidate.Track);
+                if (normalizedIndex < 0)
                 {
-                    case UpgradeTrack.AttackPower:
-                        if (seenAttackPower)
-                        {
-                            return false;
-                        }
+                    continue;
+                }
 
-                        seenAttackPower = true;
-                        break;
-                    case UpgradeTrack.MaxHealth:
-                        if (seenMaxHealth)
-                        {
-                            return false;
-                        }
+                normalized[normalizedIndex] = candidate;
+            }
 
-                        seenMaxHealth = true;
-                        break;
-                    case UpgradeTrack.Defense:
-                        if (seenDefense)
-                        {
-                            return false;
-                        }
+            return normalized;
+        }
 
-                        seenDefense = true;
-                        break;
-                    case UpgradeTrack.AttackSpeed:
-                        if (seenAttackSpeed)
-                        {
-                            return false;
-                        }
-
-                        seenAttackSpeed = true;
-                        break;
-                    case UpgradeTrack.GoldGain:
-                        if (seenGoldGain)
-                        {
-                            return false;
-                        }
-
-                        seenGoldGain = true;
-                        break;
-                    default:
-                        return false;
+        private static int GetDefinitionIndex(List<UpgradeDefinition> definitions, UpgradeTrack track)
+        {
+            for (var i = 0; i < definitions.Count; i++)
+            {
+                if (definitions[i] != null && definitions[i].Track == track)
+                {
+                    return i;
                 }
             }
 
-            return seenAttackPower && seenMaxHealth && seenDefense && seenAttackSpeed && seenGoldGain;
+            return -1;
         }
 
         private static List<UpgradeDefinition> BuildDefaultUpgradeDefinitions()
@@ -397,7 +366,11 @@ namespace IdleGame
             var index = 0;
             foreach (var state in upgradeStates.Values)
             {
-                upgradeData[index++] = new UpgradeViewData(state.Definition.Track, state.Level, state.CurrentCost);
+                upgradeData[index++] = new UpgradeViewData(
+                    state.Definition.Track,
+                    state.Level,
+                    state.CurrentCost,
+                    state.Definition.GetGoldGainMultiplier(state.Level));
             }
 
             var battle = battleSystem != null

@@ -159,12 +159,14 @@ namespace IdleGame
         private void Refresh(GameSnapshot snapshot)
         {
             var bossTag = IsBossEnemy(snapshot.Battle.EnemyId) ? " BOSS" : string.Empty;
+            var lootMultiplier = GetGoldGainMultiplier(snapshot);
+            var lootBonusPercent = Mathf.Max(0, Mathf.RoundToInt((lootMultiplier - 1f) * 100f));
 
             if (goldText != null)
             {
                 goldText.text = snapshot.LastMilestoneWave > 0
-                    ? $"G {snapshot.Gold} | W{snapshot.Wave}{bossTag} | N{snapshot.NextMilestoneWave} | L{snapshot.LastMilestoneWave} +{snapshot.LastMilestoneGoldReward}g/+{snapshot.LastMilestoneAttackReward}A"
-                    : $"G {snapshot.Gold} | W{snapshot.Wave}{bossTag} | N{snapshot.NextMilestoneWave}";
+                    ? $"G {snapshot.Gold} | Loot +{lootBonusPercent}% | W{snapshot.Wave}{bossTag} | N{snapshot.NextMilestoneWave} | L{snapshot.LastMilestoneWave} +{snapshot.LastMilestoneGoldReward}g/+{snapshot.LastMilestoneAttackReward}A"
+                    : $"G {snapshot.Gold} | Loot +{lootBonusPercent}% | W{snapshot.Wave}{bossTag} | N{snapshot.NextMilestoneWave}";
             }
 
             if (playerStatsText != null)
@@ -211,7 +213,9 @@ namespace IdleGame
 
             if (buttonText != null && data.HasValue)
             {
-                buttonText.text = $"{GetUpgradeLabel(track)} Lv.{data.Value.Level} ({data.Value.NextCost}g)";
+                buttonText.text = track == UpgradeTrack.GoldGain
+                    ? $"{GetUpgradeLabel(track)} +{Mathf.RoundToInt((data.Value.GoldGainMultiplier - 1f) * 100f)}% ({data.Value.NextCost}g)"
+                    : $"{GetUpgradeLabel(track)} Lv.{data.Value.Level} ({data.Value.NextCost}g)";
             }
 
             if (button != null && data.HasValue)
@@ -376,9 +380,15 @@ namespace IdleGame
                 UpgradeTrack.MaxHealth => "Health",
                 UpgradeTrack.Defense => "Defense",
                 UpgradeTrack.AttackSpeed => "Speed",
-                UpgradeTrack.GoldGain => "Gold",
+                UpgradeTrack.GoldGain => "Bounty",
                 _ => track.ToString(),
             };
+        }
+
+        private static float GetGoldGainMultiplier(GameSnapshot snapshot)
+        {
+            var data = GetUpgradeViewData(snapshot, UpgradeTrack.GoldGain);
+            return data.HasValue ? Mathf.Max(1f, data.Value.GoldGainMultiplier) : 1f;
         }
     }
 }
