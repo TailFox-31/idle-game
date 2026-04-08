@@ -87,11 +87,11 @@ namespace IdleGame
 
         private const int FirstWave = 1;
         private const int BossWaveInterval = 10;
-        private static readonly BossFamilyProfile DefaultBossProfile = new("Enemy", "Elite", 3.5f, 1.75f, 1.15f, 4f);
+        private static readonly BossFamilyProfile DefaultBossProfile = new("Enemy", "Elite", 2.8f, 1.55f, 1.1f, 4f);
         private static readonly BossFamilyProfile[] DefaultBossProfiles =
         {
-            new("Boar", "Heavy", 4.25f, 2f, 0.72f, 3.6f),
-            new("Wisp", "Frenzy", 2.7f, 1.35f, 1.85f, 4.35f),
+            new("Boar", "Heavy", 2.6f, 1.45f, 0.8f, 4f),
+            new("Wisp", "Frenzy", 2.15f, 1.2f, 1.5f, 4.6f),
         };
 
         [SerializeField]
@@ -108,16 +108,16 @@ namespace IdleGame
 
         [Header("Wave Scaling")]
         [SerializeField, Min(0f)]
-        private float healthMultiplierPerWave = 0.35f;
+        private float healthMultiplierPerWave = 0.24f;
 
         [SerializeField, Min(0f)]
-        private float attackMultiplierPerWave = 0.18f;
+        private float attackMultiplierPerWave = 0.10f;
 
         [SerializeField, Min(0f)]
-        private float attackSpeedPerWave = 0.03f;
+        private float attackSpeedPerWave = 0.02f;
 
         [SerializeField, Min(0f)]
-        private float goldMultiplierPerWave = 0.12f;
+        private float goldMultiplierPerWave = 0.18f;
 
         [Header("Archetype Progression")]
         [SerializeField]
@@ -217,8 +217,8 @@ namespace IdleGame
             return new List<EnemyArchetypeStage>
             {
                 new EnemyArchetypeStage(FirstWave, enemyId, 1f, 1f, 1f, 1f),
-                new EnemyArchetypeStage(10, "Boar", 1.6f, 1.15f, 0.8f, 1.15f),
-                new EnemyArchetypeStage(20, "Wisp", 1.15f, 1.45f, 1.45f, 1.35f),
+                new EnemyArchetypeStage(10, "Boar", 1.3f, 1.05f, 0.85f, 1.2f),
+                new EnemyArchetypeStage(20, "Wisp", 1.1f, 1.25f, 1.3f, 1.45f),
             };
         }
 
