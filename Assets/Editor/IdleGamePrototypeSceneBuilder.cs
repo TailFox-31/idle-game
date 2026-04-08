@@ -19,6 +19,11 @@ public static class IdleGamePrototypeSceneBuilder
     private const string GoldReadoutName = "GoldReadout";
     private const string PlayerStatsReadoutName = "PlayerStatsReadout";
     private const string EnemyStatusReadoutName = "EnemyStatusReadout";
+    private const string WaveTravelPanelName = "WaveTravelPanel";
+    private const string StartWaveReadoutName = "StartWaveReadout";
+    private const string PreviousWaveButtonName = "PreviousWaveButton";
+    private const string NextWaveButtonName = "NextWaveButton";
+    private const string TravelButtonName = "TravelButton";
     private const string AttackPowerButtonName = "AttackPowerUpgradeButton";
     private const string AttackSpeedButtonName = "AttackSpeedUpgradeButton";
     private const string DefenseButtonName = "DefenseUpgradeButton";
@@ -61,6 +66,15 @@ public static class IdleGamePrototypeSceneBuilder
         enemyStatusReadout.alignment = TextAlignmentOptions.TopRight;
         var resetSaveButton = EnsureButton(headerPanel, ResetSaveButtonName, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-20f, -66f), "Reset Save", new Vector2(180f, 44f), 20f);
         resetSaveButton.GetComponent<Image>().color = new Color32(122, 54, 54, 220);
+        var waveTravelPanel = EnsureChildRectTransform(headerPanel, WaveTravelPanelName);
+        ConfigureWaveTravelPanel(waveTravelPanel);
+        var startWaveReadout = EnsureReadout(waveTravelPanel, StartWaveReadoutName, new Vector2(0f, 1f), new Vector2(1f, 1f), Vector2.zero, "Start W1 / Max W1");
+        startWaveReadout.rectTransform.sizeDelta = new Vector2(360f, 30f);
+        startWaveReadout.alignment = TextAlignmentOptions.MidlineRight;
+        startWaveReadout.fontSize = 22f;
+        var previousWaveButton = EnsureButton(waveTravelPanel, PreviousWaveButtonName, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, -42f), "Prev", new Vector2(108f, 44f), 20f);
+        var nextWaveButton = EnsureButton(waveTravelPanel, NextWaveButtonName, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(124f, -42f), "Next", new Vector2(108f, 44f), 20f);
+        var travelButton = EnsureButton(waveTravelPanel, TravelButtonName, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(248f, -42f), "Travel", new Vector2(112f, 44f), 20f);
 
         var upgradesPanel = EnsureChildRectTransform(uiRoot, UpgradesPanelName);
         ConfigureUpgradePanel(upgradesPanel);
@@ -83,7 +97,7 @@ public static class IdleGamePrototypeSceneBuilder
         var uiBinder = EnsureComponent<UIBinder>(uiBinderObject);
 
         WireGameManager(gameManager, enemyController, uiBinder);
-        WireUiBinder(uiBinder, goldReadout, playerStatsReadout, enemyStatusReadout, attackPowerButton, maxHealthButton, defenseButton, attackSpeedButton, goldGainButton, resetSaveButton);
+        WireUiBinder(uiBinder, goldReadout, playerStatsReadout, enemyStatusReadout, startWaveReadout, previousWaveButton, nextWaveButton, travelButton, attackPowerButton, maxHealthButton, defenseButton, attackSpeedButton, goldGainButton, resetSaveButton);
 
         EditorSceneManager.MarkSceneDirty(scene);
         Selection.activeGameObject = systemsRoot;
@@ -165,6 +179,10 @@ public static class IdleGamePrototypeSceneBuilder
         TMP_Text goldReadout,
         TMP_Text playerStatsReadout,
         TMP_Text enemyStatusReadout,
+        TMP_Text startWaveReadout,
+        Button previousWaveButton,
+        Button nextWaveButton,
+        Button travelButton,
         Button attackPowerButton,
         Button maxHealthButton,
         Button defenseButton,
@@ -176,6 +194,10 @@ public static class IdleGamePrototypeSceneBuilder
         SetObjectReference(serializedObject, "goldText", goldReadout);
         SetObjectReference(serializedObject, "playerStatsText", playerStatsReadout);
         SetObjectReference(serializedObject, "enemyText", enemyStatusReadout);
+        SetObjectReference(serializedObject, "startWaveText", startWaveReadout);
+        SetObjectReference(serializedObject, "previousWaveButton", previousWaveButton);
+        SetObjectReference(serializedObject, "nextWaveButton", nextWaveButton);
+        SetObjectReference(serializedObject, "travelButton", travelButton);
         SetObjectReference(serializedObject, "attackPowerButton", attackPowerButton);
         SetObjectReference(serializedObject, "attackPowerButtonText", GetButtonLabel(attackPowerButton));
         SetObjectReference(serializedObject, "maxHealthButton", maxHealthButton);
@@ -302,6 +324,15 @@ public static class IdleGamePrototypeSceneBuilder
         rectTransform.anchorMax = Vector2.one;
         rectTransform.offsetMin = Vector2.zero;
         rectTransform.offsetMax = Vector2.zero;
+    }
+
+    private static void ConfigureWaveTravelPanel(RectTransform rectTransform)
+    {
+        rectTransform.anchorMin = new Vector2(1f, 1f);
+        rectTransform.anchorMax = new Vector2(1f, 1f);
+        rectTransform.pivot = new Vector2(1f, 1f);
+        rectTransform.anchoredPosition = new Vector2(-20f, -122f);
+        rectTransform.sizeDelta = new Vector2(360f, 96f);
     }
 
     private static void ConfigureUpgradePanel(RectTransform rectTransform)

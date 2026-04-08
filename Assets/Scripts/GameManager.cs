@@ -28,6 +28,8 @@ namespace IdleGame
         public GameSnapshot(
             int gold,
             int wave,
+            int highestWaveReached,
+            int selectedStartWave,
             CombatantStats playerStats,
             BattleSnapshot battle,
             UpgradeViewData[] upgrades,
@@ -39,6 +41,8 @@ namespace IdleGame
         {
             Gold = gold;
             Wave = wave;
+            HighestWaveReached = highestWaveReached;
+            SelectedStartWave = selectedStartWave;
             PlayerStats = playerStats;
             Battle = battle;
             Upgrades = upgrades;
@@ -52,6 +56,10 @@ namespace IdleGame
         public int Gold { get; }
 
         public int Wave { get; }
+
+        public int HighestWaveReached { get; }
+
+        public int SelectedStartWave { get; }
 
         public CombatantStats PlayerStats { get; }
 
@@ -77,6 +85,7 @@ namespace IdleGame
         {
             public int gold;
             public int wave = 1;
+            public int highestWaveReached;
             public int lastClaimedMilestoneWave;
             public int lastMilestoneGoldReward;
             public int lastMilestoneAttackReward;
@@ -135,6 +144,8 @@ namespace IdleGame
         private AutoBattleSystem battleSystem;
         private int gold;
         private int currentWave = 1;
+        private int highestWaveReached = 1;
+        private int selectedStartWave = 1;
         private int lastClaimedMilestoneWave;
         private int lastMilestoneGoldReward;
         private int lastMilestoneAttackReward;
@@ -195,6 +206,21 @@ namespace IdleGame
             PublishState();
         }
 
+        public void SelectPreviousStartWave()
+        {
+            SetSelectedStartWave(selectedStartWave - 1);
+        }
+
+        public void SelectNextStartWave()
+        {
+            SetSelectedStartWave(selectedStartWave + 1);
+        }
+
+        public void TravelToSelectedWave()
+        {
+            TravelToWave(selectedStartWave);
+        }
+
         private void InitializeUpgradeStates()
         {
             upgradeStates.Clear();
@@ -233,6 +259,8 @@ namespace IdleGame
 
             gold = Mathf.Max(0, saveData.gold);
             currentWave = Mathf.Max(1, saveData.wave);
+            highestWaveReached = Mathf.Max(currentWave, saveData.highestWaveReached);
+            selectedStartWave = Mathf.Clamp(currentWave, 1, highestWaveReached);
             lastClaimedMilestoneWave = Mathf.Max(0, saveData.lastClaimedMilestoneWave);
             lastMilestoneGoldReward = Mathf.Max(0, saveData.lastMilestoneGoldReward);
             lastMilestoneAttackReward = Mathf.Max(0, saveData.lastMilestoneAttackReward);
@@ -250,6 +278,8 @@ namespace IdleGame
         {
             gold = Mathf.Max(0, startingGold);
             currentWave = 1;
+            highestWaveReached = 1;
+            selectedStartWave = 1;
             lastClaimedMilestoneWave = 0;
             lastMilestoneGoldReward = 0;
             lastMilestoneAttackReward = 0;
@@ -349,6 +379,32 @@ namespace IdleGame
             battleSystem.SetEnemy(enemyController.CreateSpawnDataForWave(currentWave));
         }
 
+        private void SetSelectedStartWave(int targetWave)
+        {
+            var clampedWave = Mathf.Clamp(targetWave, 1, Mathf.Max(1, highestWaveReached));
+            if (clampedWave == selectedStartWave)
+            {
+                return;
+            }
+
+            selectedStartWave = clampedWave;
+            PublishState();
+        }
+
+        private void TravelToWave(int targetWave)
+        {
+            currentWave = Mathf.Clamp(targetWave, 1, Mathf.Max(1, highestWaveReached));
+            selectedStartWave = currentWave;
+            RebuildBattleState();
+            SaveProgress();
+            PublishState();
+        }
+
+        private void UpdateHighestWaveReached(int reachedWave)
+        {
+            highestWaveReached = Mathf.Max(highestWaveReached, Mathf.Max(1, reachedWave));
+        }
+
         private CombatantStats BuildPlayerStats()
         {
             var stats = playerBaseStats;
@@ -380,6 +436,8 @@ namespace IdleGame
             return new GameSnapshot(
                 gold,
                 currentWave,
+                highestWaveReached,
+                selectedStartWave,
                 BuildPlayerStats(),
                 battle,
                 upgradeData,
@@ -444,6 +502,7 @@ namespace IdleGame
             }
 
             currentWave = Mathf.Max(currentWave, defeatedEnemy.Wave) + 1;
+            UpdateHighestWaveReached(currentWave);
             TryGrantMilestoneReward(currentWave);
             battleSystem?.QueueEnemy(enemyController.CreateSpawnDataForWave(currentWave));
             SaveProgress();
@@ -511,6 +570,7 @@ namespace IdleGame
             {
                 gold = gold,
                 wave = currentWave,
+                highestWaveReached = highestWaveReached,
                 lastClaimedMilestoneWave = lastClaimedMilestoneWave,
                 lastMilestoneGoldReward = lastMilestoneGoldReward,
                 lastMilestoneAttackReward = lastMilestoneAttackReward,
@@ -551,14 +611,16 @@ namespace IdleGame
 
         public void EditorJumpToWave(int targetWave)
         {
-            if (enemyController == null || battleSystem == null)
+            if (enemyController == null)
             {
                 return;
             }
 
             currentWave = Mathf.Max(1, targetWave);
+            UpdateHighestWaveReached(currentWave);
+            selectedStartWave = currentWave;
             GrantMilestonesUpToWave(currentWave);
-            battleSystem.SetEnemy(enemyController.CreateSpawnDataForWave(currentWave));
+            RebuildBattleState();
             SaveProgress();
             PublishState();
         }
