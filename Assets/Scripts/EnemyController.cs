@@ -144,11 +144,11 @@ namespace IdleGame
         private static readonly BossFamilyProfile DefaultBossProfile = new("Enemy", "Elite", 2.8f, 1.55f, 1.1f, 0, 0f, 4f, 1f, 1f, BossMechanicDefinition.None);
         private static readonly BossFamilyProfile[] DefaultBossProfiles =
         {
-            new("Slime", "Crown", 2.55f, 1.25f, 1f, 0, 0f, 4f, 0.95f, 1f, new BossMechanicDefinition(BossMechanicType.GuardRecovery, "Jelly guard", 4.2f, 2f, damageTakenMultiplier: 0.45f, recoveryPercentPerSecond: 0.06f)),
-            new("Boar", "Heavy", 2.9f, 1.8f, 0.68f, 1, 0.2f, 4.4f, 1.05f, 1.35f, new BossMechanicDefinition(BossMechanicType.WindUpBurst, "Crushing slam", 0f, 2.6f, attackPowerMultiplier: 3.25f)),
-            new("Wisp", "Frenzy", 1.9f, 1.05f, 1.8f, 0, 0f, 4.7f, 0.75f, 0.4f, new BossMechanicDefinition(BossMechanicType.FrenzyWindow, "Overdrive", 3.2f, 2.1f, attackPowerMultiplier: 0.75f, attackSpeedMultiplier: 3.1f)),
-            new("Bandit", "Cutthroat", 2.15f, 1.35f, 1.55f, 0, 0.15f, 5.2f, 0.65f, 0.5f, new BossMechanicDefinition(BossMechanicType.FrenzyWindow, "Flurry", 4f, 1.6f, attackPowerMultiplier: 0.9f, attackSpeedMultiplier: 2.45f)),
-            new("Golem", "Bulwark", 3.6f, 1.2f, 0.58f, 3, 1.4f, 5.7f, 1.15f, 1.45f, new BossMechanicDefinition(BossMechanicType.GuardRecovery, "Fortify", 4.8f, 3f, damageTakenMultiplier: 0.2f, recoveryPercentPerSecond: 0.12f)),
+            new("Slime", "Crown", 2.55f, 1.2f, 0.96f, 0, 0f, 4f, 0.95f, 1f, new BossMechanicDefinition(BossMechanicType.GuardRecovery, "Jelly guard", 4f, 2.4f, damageTakenMultiplier: 0.4f, recoveryPercentPerSecond: 0.07f)),
+            new("Boar", "Heavy", 2.9f, 1.8f, 0.68f, 1, 0.2f, 4.4f, 1.05f, 1.35f, new BossMechanicDefinition(BossMechanicType.WindUpBurst, "Crushing slam", 1.5f, 2.4f, attackPowerMultiplier: 3.5f, damageTakenMultiplier: 1.65f)),
+            new("Wisp", "Stormbound", 1.95f, 1f, 1.7f, 0, 0f, 4.7f, 0.75f, 0.35f, new BossMechanicDefinition(BossMechanicType.EnrageThreshold, "Storm surge", 0f, 0f, attackPowerMultiplier: 1.4f, attackSpeedMultiplier: 2.1f, thresholdHealthRatio: 0.55f)),
+            new("Bandit", "Cutthroat", 2.15f, 1.35f, 1.55f, 0, 0.15f, 5.2f, 0.65f, 0.5f, new BossMechanicDefinition(BossMechanicType.FrenzyWindow, "Flurry", 3.8f, 1.7f, attackPowerMultiplier: 0.95f, attackSpeedMultiplier: 2.6f)),
+            new("Golem", "Spined", 3.45f, 1.15f, 0.62f, 3, 1.1f, 5.7f, 1.15f, 1.45f, new BossMechanicDefinition(BossMechanicType.ReflectWindow, "Granite spikes", 4.6f, 2.2f, damageTakenMultiplier: 0.6f, retaliationDamageMultiplier: 0.85f, retaliationFlatDamage: 1)),
         };
 
         [SerializeField]

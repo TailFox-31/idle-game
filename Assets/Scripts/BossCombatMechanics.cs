@@ -8,6 +8,8 @@ namespace IdleGame
         WindUpBurst = 1,
         FrenzyWindow = 2,
         GuardRecovery = 3,
+        EnrageThreshold = 4,
+        ReflectWindow = 5,
     }
 
     public readonly struct BossMechanicDefinition
@@ -20,7 +22,10 @@ namespace IdleGame
             float attackPowerMultiplier = 1f,
             float attackSpeedMultiplier = 1f,
             float damageTakenMultiplier = 1f,
-            float recoveryPercentPerSecond = 0f)
+            float recoveryPercentPerSecond = 0f,
+            float thresholdHealthRatio = 0f,
+            float retaliationDamageMultiplier = 0f,
+            int retaliationFlatDamage = 0)
         {
             Type = type;
             DisplayName = string.IsNullOrWhiteSpace(displayName) ? string.Empty : displayName.Trim();
@@ -28,8 +33,11 @@ namespace IdleGame
             ActiveDuration = Mathf.Max(0f, activeDuration);
             AttackPowerMultiplier = Mathf.Max(0f, attackPowerMultiplier);
             AttackSpeedMultiplier = Mathf.Max(0f, attackSpeedMultiplier);
-            DamageTakenMultiplier = Mathf.Clamp01(damageTakenMultiplier);
+            DamageTakenMultiplier = Mathf.Max(0.1f, damageTakenMultiplier);
             RecoveryPercentPerSecond = Mathf.Max(0f, recoveryPercentPerSecond);
+            ThresholdHealthRatio = Mathf.Clamp01(thresholdHealthRatio);
+            RetaliationDamageMultiplier = Mathf.Max(0f, retaliationDamageMultiplier);
+            RetaliationFlatDamage = Mathf.Max(0, retaliationFlatDamage);
         }
 
         public BossMechanicType Type { get; }
@@ -48,9 +56,30 @@ namespace IdleGame
 
         public float RecoveryPercentPerSecond { get; }
 
+        public float ThresholdHealthRatio { get; }
+
+        public float RetaliationDamageMultiplier { get; }
+
+        public int RetaliationFlatDamage { get; }
+
         public bool IsDefined => Type != BossMechanicType.None;
 
         public static BossMechanicDefinition None => default;
+    }
+
+    public readonly struct BossHitReaction
+    {
+        public BossHitReaction(bool stateChanged, int retaliationDamage)
+        {
+            StateChanged = stateChanged;
+            RetaliationDamage = Mathf.Max(0, retaliationDamage);
+        }
+
+        public bool StateChanged { get; }
+
+        public int RetaliationDamage { get; }
+
+        public static BossHitReaction None => default;
     }
 
     public sealed class BossMechanicRuntime
@@ -59,6 +88,7 @@ namespace IdleGame
         private float timer;
         private float pendingRecovery;
         private int maxHealth;
+        private bool enrageTriggered;
         private WindUpBurstState burstState;
         private TimedWindowState windowState;
 
@@ -67,6 +97,7 @@ namespace IdleGame
             Inactive = 0,
             Charging = 1,
             BurstReady = 2,
+            Recovering = 3,
         }
 
         private enum TimedWindowState
@@ -84,6 +115,7 @@ namespace IdleGame
             definition = newDefinition;
             maxHealth = Mathf.Max(1, newMaxHealth);
             pendingRecovery = 0f;
+            enrageTriggered = false;
             burstState = WindUpBurstState.Inactive;
             windowState = TimedWindowState.Cooldown;
             timer = 0f;
@@ -96,6 +128,7 @@ namespace IdleGame
                     break;
                 case BossMechanicType.FrenzyWindow:
                 case BossMechanicType.GuardRecovery:
+                case BossMechanicType.ReflectWindow:
                     windowState = TimedWindowState.Cooldown;
                     timer = GetCooldownDuration();
                     break;
@@ -147,10 +180,16 @@ namespace IdleGame
                         burstState = WindUpBurstState.BurstReady;
                         enemy.SetAttackCooldown(0f);
                     }
+                    else if (burstState == WindUpBurstState.Recovering)
+                    {
+                        burstState = WindUpBurstState.Charging;
+                        timer = GetBurstChargeDuration();
+                    }
 
                     break;
                 case BossMechanicType.FrenzyWindow:
                 case BossMechanicType.GuardRecovery:
+                case BossMechanicType.ReflectWindow:
                     windowState = windowState == TimedWindowState.Cooldown
                         ? TimedWindowState.Active
                         : TimedWindowState.Cooldown;
@@ -167,14 +206,18 @@ namespace IdleGame
         {
             BossMechanicType.WindUpBurst => burstState == WindUpBurstState.BurstReady,
             BossMechanicType.GuardRecovery => !IsGuarding,
+            BossMechanicType.ReflectWindow => !IsReflecting,
             _ => true,
         };
 
         public float GetAttackSpeedMultiplier()
         {
-            return definition.Type == BossMechanicType.FrenzyWindow && IsWindowActive
-                ? Mathf.Max(0.1f, definition.AttackSpeedMultiplier)
-                : 1f;
+            return definition.Type switch
+            {
+                BossMechanicType.FrenzyWindow when IsWindowActive => Mathf.Max(0.1f, definition.AttackSpeedMultiplier),
+                BossMechanicType.EnrageThreshold when enrageTriggered => Mathf.Max(0.1f, definition.AttackSpeedMultiplier),
+                _ => 1f,
+            };
         }
 
         public int ModifyOutgoingDamage(int baseDamage)
@@ -194,6 +237,11 @@ namespace IdleGame
                 return Mathf.Max(1, Mathf.RoundToInt(baseDamage * Mathf.Max(0.1f, definition.AttackPowerMultiplier)));
             }
 
+            if (definition.Type == BossMechanicType.EnrageThreshold && enrageTriggered)
+            {
+                return Mathf.Max(1, Mathf.RoundToInt(baseDamage * Mathf.Max(0.1f, definition.AttackPowerMultiplier)));
+            }
+
             return baseDamage;
         }
 
@@ -209,6 +257,16 @@ namespace IdleGame
                 return Mathf.Max(1, Mathf.RoundToInt(baseDamage * definition.DamageTakenMultiplier));
             }
 
+            if (definition.Type == BossMechanicType.WindUpBurst && burstState == WindUpBurstState.Recovering)
+            {
+                return Mathf.Max(1, Mathf.RoundToInt(baseDamage * definition.DamageTakenMultiplier));
+            }
+
+            if (definition.Type == BossMechanicType.ReflectWindow && IsReflecting)
+            {
+                return Mathf.Max(1, Mathf.RoundToInt(baseDamage * definition.DamageTakenMultiplier));
+            }
+
             return baseDamage;
         }
 
@@ -219,14 +277,53 @@ namespace IdleGame
                 return false;
             }
 
-            burstState = WindUpBurstState.Charging;
-            timer = GetBurstChargeDuration();
+            burstState = WindUpBurstState.Recovering;
+            timer = GetCooldownDuration();
             return true;
+        }
+
+        public BossHitReaction NotifyIncomingHitResolved(int appliedDamage, CombatantRuntime enemy, CombatantRuntime player)
+        {
+            if (!definition.IsDefined)
+            {
+                return BossHitReaction.None;
+            }
+
+            var changed = false;
+            var retaliationDamage = 0;
+
+            if (definition.Type == BossMechanicType.ReflectWindow && IsReflecting && appliedDamage > 0 && player != null)
+            {
+                var retaliationAttempt = Mathf.Max(
+                    0,
+                    Mathf.RoundToInt((appliedDamage * definition.RetaliationDamageMultiplier) + definition.RetaliationFlatDamage));
+                retaliationDamage = retaliationAttempt > 0
+                    ? player.ReceiveDamage(retaliationAttempt)
+                    : 0;
+                changed |= retaliationDamage > 0;
+            }
+
+            if (definition.Type == BossMechanicType.EnrageThreshold
+                && !enrageTriggered
+                && enemy != null
+                && enemy.IsAlive
+                && enemy.CurrentHealth <= GetThresholdHealth())
+            {
+                enrageTriggered = true;
+                enemy.SetAttackCooldown(0f);
+                changed = true;
+            }
+
+            return changed || retaliationDamage > 0
+                ? new BossHitReaction(changed, retaliationDamage)
+                : BossHitReaction.None;
         }
 
         private bool IsWindowActive => windowState == TimedWindowState.Active;
 
         private bool IsGuarding => definition.Type == BossMechanicType.GuardRecovery && IsWindowActive;
+
+        private bool IsReflecting => definition.Type == BossMechanicType.ReflectWindow && IsWindowActive;
 
         private float GetCooldownDuration()
         {
@@ -248,6 +345,11 @@ namespace IdleGame
             return Mathf.Max(0f, maxHealth * definition.RecoveryPercentPerSecond);
         }
 
+        private int GetThresholdHealth()
+        {
+            return Mathf.Max(1, Mathf.CeilToInt(maxHealth * definition.ThresholdHealthRatio));
+        }
+
         private string BuildStateText()
         {
             if (!definition.IsDefined)
@@ -259,12 +361,20 @@ namespace IdleGame
             {
                 BossMechanicType.WindUpBurst => burstState == WindUpBurstState.BurstReady
                     ? $"{definition.DisplayName} ready"
-                    : $"{definition.DisplayName} {timer:0.0}s",
+                    : burstState == WindUpBurstState.Recovering
+                        ? $"{definition.DisplayName} stagger {timer:0.0}s"
+                        : $"{definition.DisplayName} {timer:0.0}s",
                 BossMechanicType.FrenzyWindow => IsWindowActive
                     ? $"{definition.DisplayName} {timer:0.0}s"
                     : string.Empty,
                 BossMechanicType.GuardRecovery => IsGuarding
                     ? $"{definition.DisplayName} +{GetRecoveryPerSecond():0}/s {timer:0.0}s"
+                    : string.Empty,
+                BossMechanicType.EnrageThreshold => enrageTriggered
+                    ? $"{definition.DisplayName} unleashed"
+                    : $"{definition.DisplayName} at {definition.ThresholdHealthRatio * 100f:0}%",
+                BossMechanicType.ReflectWindow => IsReflecting
+                    ? $"{definition.DisplayName} reflect {timer:0.0}s"
                     : string.Empty,
                 _ => string.Empty,
             };
