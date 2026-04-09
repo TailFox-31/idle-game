@@ -13,6 +13,7 @@ namespace IdleGame
         private static readonly Vector2 WaveTravelPanelPosition = new(-20f, -122f);
         private static readonly Vector2 WaveTravelReadoutSize = new(360f, 52f);
         private static readonly Vector2 WaveTravelReadoutTopOffset = new(0f, -52f);
+        private static readonly Vector2 EnemyReadoutSize = new(620f, 58f);
         private static readonly Vector2 WaveTravelButtonSize = new(84f, 44f);
         private static readonly Vector2 TravelButtonSize = new(176f, 44f);
         private static readonly Vector2 PreviousWaveButtonPosition = new(0f, -64f);
@@ -119,6 +120,7 @@ namespace IdleGame
             }
 
             gameManager.StateChanged += Refresh;
+            ConfigureEnemyReadout();
             Refresh(gameManager.CurrentSnapshot);
         }
 
@@ -177,6 +179,7 @@ namespace IdleGame
             EnsureResetSaveButton();
             EnsureWaveTravelControls();
             EnsureUpgradeButtons();
+            ConfigureEnemyReadout();
             ConfigureWaveTravelLayout();
             RegisterButtons();
         }
@@ -254,16 +257,7 @@ namespace IdleGame
 
             if (enemyText != null)
             {
-                var enemyPrefix = IsBossEnemy(snapshot.Battle.EnemyId) ? "Boss " : string.Empty;
-                var behaviorSuffix = string.IsNullOrWhiteSpace(snapshot.Battle.EnemyBehaviorLabel)
-                    ? string.Empty
-                    : $" {snapshot.Battle.EnemyBehaviorLabel}";
-                var stateSuffix = string.IsNullOrWhiteSpace(snapshot.Battle.EnemyStateLabel)
-                    ? string.Empty
-                    : $" | {snapshot.Battle.EnemyStateLabel}";
-                enemyText.text = snapshot.Battle.EnemyAlive
-                    ? $"{enemyPrefix}W{snapshot.Battle.Wave} {snapshot.Battle.EnemyId}{behaviorSuffix} {snapshot.Battle.EnemyHealth}/{snapshot.Battle.EnemyMaxHealth} | {snapshot.Battle.EnemyAttackPower}ATK {snapshot.Battle.EnemyAttacksPerSecond:0.00}SPD | {snapshot.Battle.EnemyGoldReward}g{stateSuffix}"
-                    : $"{enemyPrefix}W{snapshot.Battle.Wave} {snapshot.Battle.EnemyId}{behaviorSuffix} re {snapshot.Battle.EnemyRespawnRemaining:0.0}s | {snapshot.Battle.EnemyAttackPower}ATK {snapshot.Battle.EnemyAttacksPerSecond:0.00}SPD | {snapshot.Battle.EnemyGoldReward}g";
+                enemyText.text = BuildEnemyReadout(snapshot);
             }
 
             if (startWaveText != null)
@@ -707,6 +701,22 @@ namespace IdleGame
             rectTransform.offsetMax = Vector2.zero;
         }
 
+        private void ConfigureEnemyReadout()
+        {
+            if (enemyText == null)
+            {
+                return;
+            }
+
+            enemyText.richText = true;
+            enemyText.enableWordWrapping = false;
+            enemyText.alignment = TextAlignmentOptions.TopRight;
+            enemyText.fontSize = 24f;
+
+            var rectTransform = enemyText.rectTransform;
+            rectTransform.sizeDelta = EnemyReadoutSize;
+        }
+
         private static void ConfigureWaveTravelPanelRect(RectTransform rectTransform)
         {
             if (rectTransform == null)
@@ -865,6 +875,28 @@ namespace IdleGame
         private static bool IsBossEnemy(string enemyId)
         {
             return !string.IsNullOrWhiteSpace(enemyId) && enemyId.StartsWith("Boss_", System.StringComparison.Ordinal);
+        }
+
+        private static string BuildEnemyReadout(GameSnapshot snapshot)
+        {
+            var battle = snapshot.Battle;
+            var waveMarker = IsBossEnemy(battle.EnemyId) ? $"BOSS W{battle.Wave}" : $"W{battle.Wave}";
+            var behaviorLabel = string.IsNullOrWhiteSpace(battle.EnemyBehaviorLabel)
+                ? string.Empty
+                : $" [{battle.EnemyBehaviorLabel}]";
+            var lineOne = $"{waveMarker} | {battle.EnemyId}{behaviorLabel}";
+
+            var healthOrRespawn = battle.EnemyAlive
+                ? $"HP {battle.EnemyHealth}/{battle.EnemyMaxHealth}"
+                : $"Respawn {battle.EnemyRespawnRemaining:0.0}s";
+            var statsLine = $"{healthOrRespawn} | ATK {battle.EnemyAttackPower} | SPD {battle.EnemyAttacksPerSecond:0.00} | G {battle.EnemyGoldReward}";
+
+            if (string.IsNullOrWhiteSpace(battle.EnemyStateLabel) || !battle.EnemyAlive)
+            {
+                return $"{lineOne}\n{statsLine}";
+            }
+
+            return $"{lineOne}\n<color=#F4D35E>{battle.EnemyStateLabel}</color> | {statsLine}";
         }
 
         private static string GetUpgradeLabel(UpgradeTrack track)
