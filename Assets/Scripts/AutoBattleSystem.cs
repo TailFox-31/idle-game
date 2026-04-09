@@ -5,7 +5,7 @@ namespace IdleGame
 {
     public readonly struct EnemySpawnData
     {
-        public EnemySpawnData(int wave, string enemyId, CombatantStats stats, int goldReward, float respawnDelay, string behaviorLabel, float openingAttackDelay = 0f)
+        public EnemySpawnData(int wave, string enemyId, CombatantStats stats, int goldReward, float respawnDelay, string behaviorLabel, BossMechanicDefinition bossMechanic, float openingAttackDelay = 0f)
         {
             Wave = Mathf.Max(1, wave);
             EnemyId = enemyId;
@@ -13,6 +13,7 @@ namespace IdleGame
             GoldReward = Mathf.Max(0, goldReward);
             RespawnDelay = Mathf.Max(0f, respawnDelay);
             BehaviorLabel = string.IsNullOrWhiteSpace(behaviorLabel) ? string.Empty : behaviorLabel.Trim();
+            BossMechanic = bossMechanic;
             OpeningAttackDelay = Mathf.Max(0f, openingAttackDelay);
         }
 
@@ -27,6 +28,8 @@ namespace IdleGame
         public float RespawnDelay { get; }
 
         public string BehaviorLabel { get; }
+
+        public BossMechanicDefinition BossMechanic { get; }
 
         public float OpeningAttackDelay { get; }
     }
@@ -46,6 +49,7 @@ namespace IdleGame
             float enemyAttacksPerSecond,
             int enemyGoldReward,
             string enemyBehaviorLabel,
+            string enemyStateLabel,
             bool enemyAlive,
             float enemyRespawnRemaining)
         {
@@ -61,6 +65,7 @@ namespace IdleGame
             EnemyAttacksPerSecond = enemyAttacksPerSecond;
             EnemyGoldReward = enemyGoldReward;
             EnemyBehaviorLabel = enemyBehaviorLabel;
+            EnemyStateLabel = enemyStateLabel;
             EnemyAlive = enemyAlive;
             EnemyRespawnRemaining = enemyRespawnRemaining;
         }
@@ -91,6 +96,8 @@ namespace IdleGame
 
         public string EnemyBehaviorLabel { get; }
 
+        public string EnemyStateLabel { get; }
+
         public bool EnemyAlive { get; }
 
         public float EnemyRespawnRemaining { get; }
@@ -100,6 +107,7 @@ namespace IdleGame
     {
         private readonly CombatantRuntime player;
         private readonly CombatantRuntime enemy;
+        private readonly BossMechanicRuntime enemyBossMechanic = new();
         private readonly float playerRespawnDelay;
         private EnemySpawnData enemySpawnData;
         private EnemySpawnData queuedEnemySpawnData;
@@ -112,6 +120,7 @@ namespace IdleGame
             player = new CombatantRuntime(playerStats);
             enemySpawnData = initialEnemy;
             enemy = new CombatantRuntime(initialEnemy.Stats, initialEnemy.OpeningAttackDelay);
+            enemyBossMechanic.Reset(initialEnemy.BossMechanic, initialEnemy.Stats.MaxHealth);
             this.playerRespawnDelay = Mathf.Max(0f, playerRespawnDelay);
         }
 
@@ -146,6 +155,7 @@ namespace IdleGame
             hasQueuedEnemy = false;
             enemyRespawnRemaining = 0f;
             enemy.Reset(spawnData.Stats, spawnData.OpeningAttackDelay);
+            enemyBossMechanic.Reset(spawnData.BossMechanic, spawnData.Stats.MaxHealth);
             PublishState();
         }
 
@@ -178,6 +188,7 @@ namespace IdleGame
 
                     player.Reset(player.Stats);
                     enemy.Reset(enemySpawnData.Stats, enemySpawnData.OpeningAttackDelay);
+                    enemyBossMechanic.Reset(enemySpawnData.BossMechanic, enemySpawnData.Stats.MaxHealth);
                     enemyRespawnRemaining = 0f;
                     changed = true;
                 }
@@ -195,14 +206,16 @@ namespace IdleGame
                     }
 
                     enemy.Reset(enemySpawnData.Stats, enemySpawnData.OpeningAttackDelay);
+                    enemyBossMechanic.Reset(enemySpawnData.BossMechanic, enemySpawnData.Stats.MaxHealth);
                     changed = true;
                 }
             }
             else
             {
                 changed |= player.TryRegenerate(deltaTime);
+                changed |= enemyBossMechanic.Tick(deltaTime, enemy);
                 var playerAttacks = player.TryAttack(deltaTime);
-                var enemyAttacks = enemy.TryAttack(deltaTime);
+                var enemyAttacks = enemyBossMechanic.CanAttack && enemy.TryAttack(deltaTime, enemyBossMechanic.GetAttackSpeedMultiplier());
                 if (!playerAttacks && !enemyAttacks)
                 {
                     if (changed)
@@ -215,7 +228,8 @@ namespace IdleGame
 
                 if (playerAttacks)
                 {
-                    enemy.ReceiveDamage(player.Stats.AttackPower);
+                    var outgoingPlayerDamage = enemyBossMechanic.ModifyIncomingDamage(player.Stats.AttackPower);
+                    enemy.ReceiveDamage(outgoingPlayerDamage);
                     changed = true;
 
                     if (!enemy.IsAlive)
@@ -228,7 +242,9 @@ namespace IdleGame
 
                 if (enemyAttacks)
                 {
-                    player.ReceiveDamage(enemy.Stats.AttackPower);
+                    var outgoingEnemyDamage = enemyBossMechanic.ModifyOutgoingDamage(enemy.Stats.AttackPower);
+                    player.ReceiveDamage(outgoingEnemyDamage);
+                    changed |= enemyBossMechanic.NotifyAttackResolved();
                     changed = true;
 
                     if (!player.IsAlive)
@@ -263,6 +279,7 @@ namespace IdleGame
                 displayedEnemy.Stats.AttacksPerSecond,
                 displayedEnemy.GoldReward,
                 displayedEnemy.BehaviorLabel,
+                enemy.IsAlive ? enemyBossMechanic.StateText : string.Empty,
                 enemy.IsAlive,
                 enemyRespawnRemaining);
         }
