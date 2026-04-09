@@ -27,6 +27,18 @@ namespace IdleGame
             [SerializeField, Min(0.1f)]
             private float goldMultiplier = 1f;
 
+            [SerializeField, Min(0)]
+            private int flatDamageReduction;
+
+            [SerializeField, Min(0f)]
+            private float healthRegenPerSecond;
+
+            [SerializeField, Min(0.1f)]
+            private float respawnDelayMultiplier = 1f;
+
+            [SerializeField, Min(0f)]
+            private float openingAttackDelayMultiplier = 1f;
+
             public EnemyArchetypeStage()
             {
             }
@@ -37,7 +49,11 @@ namespace IdleGame
                 float healthMultiplier,
                 float attackMultiplier,
                 float attackSpeedMultiplier,
-                float goldMultiplier)
+                float goldMultiplier,
+                int flatDamageReduction,
+                float healthRegenPerSecond,
+                float respawnDelayMultiplier,
+                float openingAttackDelayMultiplier)
             {
                 this.startWave = Mathf.Max(FirstWave, startWave);
                 this.enemyId = string.IsNullOrWhiteSpace(enemyId) ? "Enemy" : enemyId.Trim();
@@ -45,6 +61,10 @@ namespace IdleGame
                 this.attackMultiplier = Mathf.Max(0.1f, attackMultiplier);
                 this.attackSpeedMultiplier = Mathf.Max(0.1f, attackSpeedMultiplier);
                 this.goldMultiplier = Mathf.Max(0.1f, goldMultiplier);
+                this.flatDamageReduction = Mathf.Max(0, flatDamageReduction);
+                this.healthRegenPerSecond = Mathf.Max(0f, healthRegenPerSecond);
+                this.respawnDelayMultiplier = Mathf.Max(0.1f, respawnDelayMultiplier);
+                this.openingAttackDelayMultiplier = Mathf.Max(0f, openingAttackDelayMultiplier);
             }
 
             public int StartWave => Mathf.Max(FirstWave, startWave);
@@ -58,18 +78,40 @@ namespace IdleGame
             public float AttackSpeedMultiplier => Mathf.Max(0.1f, attackSpeedMultiplier);
 
             public float GoldMultiplier => Mathf.Max(0.1f, goldMultiplier);
+
+            public int FlatDamageReduction => Mathf.Max(0, flatDamageReduction);
+
+            public float HealthRegenPerSecond => Mathf.Max(0f, healthRegenPerSecond);
+
+            public float RespawnDelayMultiplier => Mathf.Max(0.1f, respawnDelayMultiplier);
+
+            public float OpeningAttackDelayMultiplier => Mathf.Max(0f, openingAttackDelayMultiplier);
         }
 
         private sealed class BossFamilyProfile
         {
-            public BossFamilyProfile(string familyId, string behaviorLabel, float healthMultiplier, float attackMultiplier, float attackSpeedMultiplier, float goldMultiplier)
+            public BossFamilyProfile(
+                string familyId,
+                string behaviorLabel,
+                float healthMultiplier,
+                float attackMultiplier,
+                float attackSpeedMultiplier,
+                int flatDamageReduction,
+                float healthRegenPerSecond,
+                float goldMultiplier,
+                float respawnDelayMultiplier,
+                float openingAttackDelayMultiplier)
             {
                 FamilyId = string.IsNullOrWhiteSpace(familyId) ? "Enemy" : familyId.Trim();
                 BehaviorLabel = string.IsNullOrWhiteSpace(behaviorLabel) ? "Boss" : behaviorLabel.Trim();
                 HealthMultiplier = Mathf.Max(0.1f, healthMultiplier);
                 AttackMultiplier = Mathf.Max(0.1f, attackMultiplier);
                 AttackSpeedMultiplier = Mathf.Max(0.1f, attackSpeedMultiplier);
+                FlatDamageReduction = Mathf.Max(0, flatDamageReduction);
+                HealthRegenPerSecond = Mathf.Max(0f, healthRegenPerSecond);
                 GoldMultiplier = Mathf.Max(0.1f, goldMultiplier);
+                RespawnDelayMultiplier = Mathf.Max(0.1f, respawnDelayMultiplier);
+                OpeningAttackDelayMultiplier = Mathf.Max(0f, openingAttackDelayMultiplier);
             }
 
             public string FamilyId { get; }
@@ -82,19 +124,27 @@ namespace IdleGame
 
             public float AttackSpeedMultiplier { get; }
 
+            public int FlatDamageReduction { get; }
+
+            public float HealthRegenPerSecond { get; }
+
             public float GoldMultiplier { get; }
+
+            public float RespawnDelayMultiplier { get; }
+
+            public float OpeningAttackDelayMultiplier { get; }
         }
 
         private const int FirstWave = 1;
         private const int BossWaveInterval = 10;
-        private static readonly BossFamilyProfile DefaultBossProfile = new("Enemy", "Elite", 2.8f, 1.55f, 1.1f, 4f);
+        private static readonly BossFamilyProfile DefaultBossProfile = new("Enemy", "Elite", 2.8f, 1.55f, 1.1f, 0, 0f, 4f, 1f, 1f);
         private static readonly BossFamilyProfile[] DefaultBossProfiles =
         {
-            new("Slime", "Crown", 2.7f, 1.35f, 1f, 4f),
-            new("Boar", "Heavy", 2.6f, 1.45f, 0.8f, 4f),
-            new("Wisp", "Frenzy", 2.15f, 1.2f, 1.5f, 4.6f),
-            new("Bandit", "Executioner", 2.35f, 1.95f, 0.65f, 5.1f),
-            new("Golem", "Bulwark", 3.15f, 1.65f, 0.72f, 5.8f),
+            new("Slime", "Crown", 2.55f, 1.25f, 1f, 0, 0f, 4f, 0.95f, 1f),
+            new("Boar", "Heavy", 2.9f, 1.8f, 0.68f, 1, 0.2f, 4.4f, 1.05f, 1.35f),
+            new("Wisp", "Frenzy", 1.9f, 1.05f, 1.8f, 0, 0f, 4.7f, 0.75f, 0.4f),
+            new("Bandit", "Cutthroat", 2.15f, 1.35f, 1.55f, 0, 0.15f, 5.2f, 0.65f, 0.5f),
+            new("Golem", "Bulwark", 3.6f, 1.2f, 0.58f, 3, 1.4f, 5.7f, 1.15f, 1.45f),
         };
 
         [SerializeField]
@@ -145,7 +195,10 @@ namespace IdleGame
             var shapedStats = scaledBaseStats.Multiply(
                 archetype.HealthMultiplier,
                 archetype.AttackMultiplier,
-                archetype.AttackSpeedMultiplier);
+                archetype.AttackSpeedMultiplier)
+                .Add(
+                    flatDamageReduction: archetype.FlatDamageReduction,
+                    healthRegenPerSecond: archetype.HealthRegenPerSecond);
             var bossProfile = isBossWave ? GetBossProfile(archetype.EnemyId) : DefaultBossProfile;
             var behaviorLabel = string.Empty;
             if (isBossWave)
@@ -153,13 +206,22 @@ namespace IdleGame
                 shapedStats = shapedStats.Multiply(
                     bossProfile.HealthMultiplier,
                     bossProfile.AttackMultiplier,
-                    bossProfile.AttackSpeedMultiplier);
+                    bossProfile.AttackSpeedMultiplier)
+                    .Add(
+                        flatDamageReduction: bossProfile.FlatDamageReduction,
+                        healthRegenPerSecond: bossProfile.HealthRegenPerSecond);
                 behaviorLabel = bossProfile.BehaviorLabel;
             }
 
             var enemyName = isBossWave
                 ? BuildBossEnemyId(archetype.EnemyId)
                 : archetype.EnemyId;
+            var resolvedRespawnDelay = Mathf.Max(
+                0f,
+                respawnDelay * archetype.RespawnDelayMultiplier * (isBossWave ? bossProfile.RespawnDelayMultiplier : 1f));
+            var openingAttackDelay = Mathf.Max(
+                0f,
+                shapedStats.AttackInterval * archetype.OpeningAttackDelayMultiplier * (isBossWave ? bossProfile.OpeningAttackDelayMultiplier : 1f));
             var reward = Mathf.Max(
                 1,
                 Mathf.RoundToInt(ScaleInt(goldReward, goldMultiplierPerWave, waveOffset) * archetype.GoldMultiplier * (isBossWave ? bossProfile.GoldMultiplier : 1f)));
@@ -169,8 +231,9 @@ namespace IdleGame
                 enemyName,
                 shapedStats,
                 reward,
-                respawnDelay,
-                behaviorLabel);
+                resolvedRespawnDelay,
+                behaviorLabel,
+                openingAttackDelay);
         }
 
         private EnemyArchetypeStage GetArchetypeForWave(int wave)
@@ -221,11 +284,11 @@ namespace IdleGame
         {
             return new List<EnemyArchetypeStage>
             {
-                new EnemyArchetypeStage(FirstWave, enemyId, 1f, 1f, 1f, 1f),
-                new EnemyArchetypeStage(11, "Boar", 1.3f, 1.05f, 0.85f, 1.2f),
-                new EnemyArchetypeStage(21, "Wisp", 1.1f, 1.25f, 1.3f, 1.45f),
-                new EnemyArchetypeStage(31, "Bandit", 1.25f, 1.55f, 1.05f, 1.7f),
-                new EnemyArchetypeStage(41, "Golem", 1.9f, 1.7f, 0.78f, 2.1f),
+                new EnemyArchetypeStage(FirstWave, enemyId, 1f, 1f, 1f, 1f, 0, 0f, 1f, 0.95f),
+                new EnemyArchetypeStage(11, "Boar", 1.55f, 1.45f, 0.72f, 1.18f, 1, 0.15f, 1.08f, 1.3f),
+                new EnemyArchetypeStage(21, "Wisp", 0.78f, 0.78f, 1.85f, 1.22f, 0, 0f, 0.82f, 0.42f),
+                new EnemyArchetypeStage(31, "Bandit", 0.95f, 1.08f, 1.45f, 1.58f, 0, 0.1f, 0.68f, 0.5f),
+                new EnemyArchetypeStage(41, "Golem", 2.15f, 0.95f, 0.55f, 1.9f, 2, 0.75f, 1.15f, 1.4f),
             };
         }
 

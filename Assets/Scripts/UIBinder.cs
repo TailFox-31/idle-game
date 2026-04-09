@@ -514,17 +514,17 @@ namespace IdleGame
 
             ConfigureUpgradePanelRect(parent);
 
-            attackPowerButton = EnsureUpgradeButton(parent, attackPowerButton, "AttackPowerUpgradeButton", AttackPowerUpgradeButtonPosition, "Attack Lv.0 (10g)", ref ownsRuntimeUpgradeControls);
+            attackPowerButton = EnsureUpgradeButton(parent, attackPowerButton, "AttackPowerUpgradeButton", AttackPowerUpgradeButtonPosition, "Attack +0 (10g)", ref ownsRuntimeUpgradeControls);
             attackPowerButtonText = GetButtonLabel(attackPowerButton);
-            maxHealthButton = EnsureUpgradeButton(parent, maxHealthButton, "MaxHealthUpgradeButton", MaxHealthUpgradeButtonPosition, "Health Lv.0 (14g)", ref ownsRuntimeUpgradeControls);
+            maxHealthButton = EnsureUpgradeButton(parent, maxHealthButton, "MaxHealthUpgradeButton", MaxHealthUpgradeButtonPosition, "Health +0 (14g)", ref ownsRuntimeUpgradeControls);
             maxHealthButtonText = GetButtonLabel(maxHealthButton);
-            healthRegenButton = EnsureUpgradeButton(parent, healthRegenButton, "HealthRegenUpgradeButton", HealthRegenUpgradeButtonPosition, "Regen +0.0/s (18g)", ref ownsRuntimeUpgradeControls);
+            healthRegenButton = EnsureUpgradeButton(parent, healthRegenButton, "HealthRegenUpgradeButton", HealthRegenUpgradeButtonPosition, "Regen +0.0/s (15g)", ref ownsRuntimeUpgradeControls);
             healthRegenButtonText = GetButtonLabel(healthRegenButton);
-            defenseButton = EnsureUpgradeButton(parent, defenseButton, "DefenseUpgradeButton", DefenseUpgradeButtonPosition, "Defense Lv.0 (16g)", ref ownsRuntimeUpgradeControls);
+            defenseButton = EnsureUpgradeButton(parent, defenseButton, "DefenseUpgradeButton", DefenseUpgradeButtonPosition, "Defense -0 dmg (14g)", ref ownsRuntimeUpgradeControls);
             defenseButtonText = GetButtonLabel(defenseButton);
-            attackSpeedButton = EnsureUpgradeButton(parent, attackSpeedButton, "AttackSpeedUpgradeButton", AttackSpeedUpgradeButtonPosition, "Speed Lv.0 (20g)", ref ownsRuntimeUpgradeControls);
+            attackSpeedButton = EnsureUpgradeButton(parent, attackSpeedButton, "AttackSpeedUpgradeButton", AttackSpeedUpgradeButtonPosition, "Speed +0.00/s (16g)", ref ownsRuntimeUpgradeControls);
             attackSpeedButtonText = GetButtonLabel(attackSpeedButton);
-            goldGainButton = EnsureUpgradeButton(parent, goldGainButton, "GoldGainUpgradeButton", GoldGainUpgradeButtonPosition, "Bounty +0% (24g)", ref ownsRuntimeUpgradeControls);
+            goldGainButton = EnsureUpgradeButton(parent, goldGainButton, "GoldGainUpgradeButton", GoldGainUpgradeButtonPosition, "Bounty +0% (18g)", ref ownsRuntimeUpgradeControls);
             goldGainButtonText = GetButtonLabel(goldGainButton);
         }
 
@@ -894,6 +894,10 @@ namespace IdleGame
         {
             return track switch
             {
+                UpgradeTrack.AttackPower => $"{GetUpgradeLabel(track)} +{data.AttackPowerBonus} ({data.NextCost}g)",
+                UpgradeTrack.MaxHealth => $"{GetUpgradeLabel(track)} +{data.MaxHealthBonus} ({data.NextCost}g)",
+                UpgradeTrack.Defense => $"{GetUpgradeLabel(track)} -{data.FlatDamageReduction} dmg ({data.NextCost}g)",
+                UpgradeTrack.AttackSpeed => $"{GetUpgradeLabel(track)} +{data.AttackSpeedBonus:0.00}/s ({data.NextCost}g)",
                 UpgradeTrack.GoldGain => $"{GetUpgradeLabel(track)} +{Mathf.RoundToInt((data.GoldGainMultiplier - 1f) * 100f)}% ({data.NextCost}g)",
                 UpgradeTrack.HealthRegen => $"{GetUpgradeLabel(track)} +{data.HealthRegenPerSecond:0.0}/s ({data.NextCost}g)",
                 _ => $"{GetUpgradeLabel(track)} Lv.{data.Level} ({data.NextCost}g)",
