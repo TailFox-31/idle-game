@@ -197,10 +197,16 @@ namespace IdleGame
             }
             else
             {
+                changed |= player.TryRegenerate(deltaTime);
                 var playerAttacks = player.TryAttack(deltaTime);
                 var enemyAttacks = enemy.TryAttack(deltaTime);
                 if (!playerAttacks && !enemyAttacks)
                 {
+                    if (changed)
+                    {
+                        PublishState();
+                    }
+
                     return;
                 }
 
