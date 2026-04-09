@@ -202,7 +202,7 @@ namespace IdleGame
                 return;
             }
 
-            GUILayout.BeginArea(new Rect(20f, 340f, 230f, 180f), "EDITOR DEBUG", GUI.skin.window);
+            GUILayout.BeginArea(new Rect(20f, 200f, 230f, 180f), "EDITOR DEBUG", GUI.skin.window);
             GUILayout.Label("Prototype-only wave tools");
 
             if (GUILayout.Button("+100 Gold"))
