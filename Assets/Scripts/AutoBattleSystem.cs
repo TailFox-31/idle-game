@@ -229,8 +229,15 @@ namespace IdleGame
                 if (playerAttacks)
                 {
                     var outgoingPlayerDamage = enemyBossMechanic.ModifyIncomingDamage(player.Stats.AttackPower);
-                    enemy.ReceiveDamage(outgoingPlayerDamage);
+                    var appliedDamage = enemy.ReceiveDamage(outgoingPlayerDamage);
+                    var hitReaction = enemyBossMechanic.NotifyIncomingHitResolved(appliedDamage, enemy, player);
+                    changed |= hitReaction.StateChanged;
                     changed = true;
+
+                    if (hitReaction.RetaliationDamage > 0 && !player.IsAlive)
+                    {
+                        playerRespawnRemaining = playerRespawnDelay;
+                    }
 
                     if (!enemy.IsAlive)
                     {
@@ -240,7 +247,7 @@ namespace IdleGame
                     }
                 }
 
-                if (enemyAttacks)
+                if (enemyAttacks && enemy.IsAlive && player.IsAlive)
                 {
                     var outgoingEnemyDamage = enemyBossMechanic.ModifyOutgoingDamage(enemy.Stats.AttackPower);
                     player.ReceiveDamage(outgoingEnemyDamage);
