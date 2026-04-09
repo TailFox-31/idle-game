@@ -454,7 +454,7 @@ namespace IdleGame
 
             var battle = battleSystem != null
                 ? battleSystem.Snapshot
-                : new BattleSnapshot(0, string.Empty, 0, 0, false, 0f, 0, 0, 0, 0f, 0, string.Empty, false, 0f);
+                : new BattleSnapshot(0, string.Empty, 0, 0, false, 0f, 0, 0, 0, 0f, 0, string.Empty, string.Empty, false, 0f);
 
             return new GameSnapshot(
                 gold,

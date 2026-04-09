@@ -110,14 +110,19 @@ namespace IdleGame
             CurrentHealth = Mathf.Clamp(currentHealth, 0, Stats.MaxHealth);
         }
 
-        public bool TryAttack(float deltaTime)
+        public void SetAttackCooldown(float cooldown)
+        {
+            attackCooldown = Mathf.Max(0f, cooldown);
+        }
+
+        public bool TryAttack(float deltaTime, float attackSpeedMultiplier = 1f)
         {
             if (!IsAlive)
             {
                 return false;
             }
 
-            attackCooldown -= deltaTime;
+            attackCooldown -= Mathf.Max(0f, deltaTime) * Mathf.Max(0f, attackSpeedMultiplier);
             if (attackCooldown > 0f)
             {
                 return false;
@@ -177,6 +182,23 @@ namespace IdleGame
                 : Mathf.Max(1, incomingDamage - Stats.FlatDamageReduction);
             CurrentHealth = Mathf.Max(0, CurrentHealth - appliedDamage);
             return appliedDamage;
+        }
+
+        public bool RecoverHealth(int amount)
+        {
+            if (!IsAlive || amount <= 0 || CurrentHealth >= Stats.MaxHealth)
+            {
+                return false;
+            }
+
+            var recoveredHealth = Mathf.Min(Stats.MaxHealth, CurrentHealth + amount);
+            if (recoveredHealth == CurrentHealth)
+            {
+                return false;
+            }
+
+            CurrentHealth = recoveredHealth;
+            return true;
         }
     }
 }

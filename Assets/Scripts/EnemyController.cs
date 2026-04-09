@@ -100,7 +100,8 @@ namespace IdleGame
                 float healthRegenPerSecond,
                 float goldMultiplier,
                 float respawnDelayMultiplier,
-                float openingAttackDelayMultiplier)
+                float openingAttackDelayMultiplier,
+                BossMechanicDefinition bossMechanic)
             {
                 FamilyId = string.IsNullOrWhiteSpace(familyId) ? "Enemy" : familyId.Trim();
                 BehaviorLabel = string.IsNullOrWhiteSpace(behaviorLabel) ? "Boss" : behaviorLabel.Trim();
@@ -112,6 +113,7 @@ namespace IdleGame
                 GoldMultiplier = Mathf.Max(0.1f, goldMultiplier);
                 RespawnDelayMultiplier = Mathf.Max(0.1f, respawnDelayMultiplier);
                 OpeningAttackDelayMultiplier = Mathf.Max(0f, openingAttackDelayMultiplier);
+                BossMechanic = bossMechanic;
             }
 
             public string FamilyId { get; }
@@ -133,18 +135,20 @@ namespace IdleGame
             public float RespawnDelayMultiplier { get; }
 
             public float OpeningAttackDelayMultiplier { get; }
+
+            public BossMechanicDefinition BossMechanic { get; }
         }
 
         private const int FirstWave = 1;
         private const int BossWaveInterval = 10;
-        private static readonly BossFamilyProfile DefaultBossProfile = new("Enemy", "Elite", 2.8f, 1.55f, 1.1f, 0, 0f, 4f, 1f, 1f);
+        private static readonly BossFamilyProfile DefaultBossProfile = new("Enemy", "Elite", 2.8f, 1.55f, 1.1f, 0, 0f, 4f, 1f, 1f, BossMechanicDefinition.None);
         private static readonly BossFamilyProfile[] DefaultBossProfiles =
         {
-            new("Slime", "Crown", 2.55f, 1.25f, 1f, 0, 0f, 4f, 0.95f, 1f),
-            new("Boar", "Heavy", 2.9f, 1.8f, 0.68f, 1, 0.2f, 4.4f, 1.05f, 1.35f),
-            new("Wisp", "Frenzy", 1.9f, 1.05f, 1.8f, 0, 0f, 4.7f, 0.75f, 0.4f),
-            new("Bandit", "Cutthroat", 2.15f, 1.35f, 1.55f, 0, 0.15f, 5.2f, 0.65f, 0.5f),
-            new("Golem", "Bulwark", 3.6f, 1.2f, 0.58f, 3, 1.4f, 5.7f, 1.15f, 1.45f),
+            new("Slime", "Crown", 2.55f, 1.25f, 1f, 0, 0f, 4f, 0.95f, 1f, new BossMechanicDefinition(BossMechanicType.GuardRecovery, "Jelly guard", 4.2f, 2f, damageTakenMultiplier: 0.45f, recoveryPercentPerSecond: 0.06f)),
+            new("Boar", "Heavy", 2.9f, 1.8f, 0.68f, 1, 0.2f, 4.4f, 1.05f, 1.35f, new BossMechanicDefinition(BossMechanicType.WindUpBurst, "Crushing slam", 0f, 2.6f, attackPowerMultiplier: 3.25f)),
+            new("Wisp", "Frenzy", 1.9f, 1.05f, 1.8f, 0, 0f, 4.7f, 0.75f, 0.4f, new BossMechanicDefinition(BossMechanicType.FrenzyWindow, "Overdrive", 3.2f, 2.1f, attackPowerMultiplier: 0.75f, attackSpeedMultiplier: 3.1f)),
+            new("Bandit", "Cutthroat", 2.15f, 1.35f, 1.55f, 0, 0.15f, 5.2f, 0.65f, 0.5f, new BossMechanicDefinition(BossMechanicType.FrenzyWindow, "Flurry", 4f, 1.6f, attackPowerMultiplier: 0.9f, attackSpeedMultiplier: 2.45f)),
+            new("Golem", "Bulwark", 3.6f, 1.2f, 0.58f, 3, 1.4f, 5.7f, 1.15f, 1.45f, new BossMechanicDefinition(BossMechanicType.GuardRecovery, "Fortify", 4.8f, 3f, damageTakenMultiplier: 0.2f, recoveryPercentPerSecond: 0.12f)),
         };
 
         [SerializeField]
@@ -233,6 +237,7 @@ namespace IdleGame
                 reward,
                 resolvedRespawnDelay,
                 behaviorLabel,
+                isBossWave ? bossProfile.BossMechanic : BossMechanicDefinition.None,
                 openingAttackDelay);
         }
 
