@@ -1,6 +1,7 @@
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
+using System.Collections.Generic;
 
 namespace IdleGame
 {
@@ -17,6 +18,17 @@ namespace IdleGame
         private static readonly Vector2 PreviousWaveButtonPosition = new(0f, -64f);
         private static readonly Vector2 NextWaveButtonPosition = new(92f, -64f);
         private static readonly Vector2 TravelButtonPosition = new(184f, -64f);
+        private static readonly Vector2 RuntimeUpgradePanelAnchor = new(0f, 0f);
+        private static readonly Vector2 RuntimeUpgradePanelPivot = new(0f, 0f);
+        private static readonly Vector2 RuntimeUpgradePanelPosition = new(20f, 20f);
+        private static readonly Vector2 RuntimeUpgradePanelSize = new(340f, 448f);
+        private static readonly Vector2 RuntimeUpgradeButtonSize = new(320f, 58f);
+        private static readonly Vector2 AttackPowerUpgradeButtonPosition = new(0f, 0f);
+        private static readonly Vector2 MaxHealthUpgradeButtonPosition = new(0f, -74f);
+        private static readonly Vector2 HealthRegenUpgradeButtonPosition = new(0f, -148f);
+        private static readonly Vector2 DefenseUpgradeButtonPosition = new(0f, -222f);
+        private static readonly Vector2 AttackSpeedUpgradeButtonPosition = new(0f, -296f);
+        private static readonly Vector2 GoldGainUpgradeButtonPosition = new(0f, -370f);
 
         [Header("Readouts")]
         [SerializeField]
@@ -54,6 +66,12 @@ namespace IdleGame
         private TMP_Text maxHealthButtonText;
 
         [SerializeField]
+        private Button healthRegenButton;
+
+        [SerializeField]
+        private TMP_Text healthRegenButtonText;
+
+        [SerializeField]
         private Button goldGainButton;
 
         [SerializeField]
@@ -81,6 +99,8 @@ namespace IdleGame
 
         private bool ownsRuntimeResetButton;
         private bool ownsRuntimeWaveTravelControls;
+        private bool ownsRuntimeUpgradeControls;
+        private readonly List<GameObject> runtimeUpgradeObjects = new();
         private GameManager gameManager;
         private static readonly Color32 TravelTargetHighlightColor = new(255, 214, 102, 255);
 
@@ -127,6 +147,11 @@ namespace IdleGame
             gameManager?.TryPurchaseUpgrade(UpgradeTrack.GoldGain);
         }
 
+        public void RequestHealthRegenUpgrade()
+        {
+            gameManager?.TryPurchaseUpgrade(UpgradeTrack.HealthRegen);
+        }
+
         public void RequestResetSave()
         {
             gameManager?.ResetSavedProgress();
@@ -151,6 +176,7 @@ namespace IdleGame
         {
             EnsureResetSaveButton();
             EnsureWaveTravelControls();
+            EnsureUpgradeButtons();
             ConfigureWaveTravelLayout();
             RegisterButtons();
         }
@@ -164,6 +190,7 @@ namespace IdleGame
         {
             DestroyRuntimeResetButton();
             DestroyRuntimeWaveTravelControls();
+            DestroyRuntimeUpgradeControls();
             Unbind();
         }
 
@@ -219,9 +246,10 @@ namespace IdleGame
 
             if (playerStatsText != null)
             {
+                var regenPerSecond = GetHealthRegenPerSecond(snapshot);
                 playerStatsText.text = snapshot.Battle.PlayerAlive
-                    ? $"HP {snapshot.Battle.PlayerHealth}/{snapshot.Battle.PlayerMaxHealth} | ATK {snapshot.PlayerStats.AttackPower} | SPD {snapshot.PlayerStats.AttacksPerSecond:0.00} | DEF {snapshot.PlayerStats.FlatDamageReduction} | M+{snapshot.MilestoneAttackBonus}"
-                    : $"HP 0/{snapshot.Battle.PlayerMaxHealth} | Down {snapshot.Battle.PlayerRespawnRemaining:0.0}s | ATK {snapshot.PlayerStats.AttackPower} | DEF {snapshot.PlayerStats.FlatDamageReduction}";
+                    ? $"HP {snapshot.Battle.PlayerHealth}/{snapshot.Battle.PlayerMaxHealth} | ATK {snapshot.PlayerStats.AttackPower} | SPD {snapshot.PlayerStats.AttacksPerSecond:0.00} | DEF {snapshot.PlayerStats.FlatDamageReduction} | REG {regenPerSecond:0.0}/s | M+{snapshot.MilestoneAttackBonus}"
+                    : $"HP 0/{snapshot.Battle.PlayerMaxHealth} | Down {snapshot.Battle.PlayerRespawnRemaining:0.0}s | ATK {snapshot.PlayerStats.AttackPower} | DEF {snapshot.PlayerStats.FlatDamageReduction} | REG {regenPerSecond:0.0}/s";
             }
 
             if (enemyText != null)
@@ -242,9 +270,10 @@ namespace IdleGame
             }
 
             RefreshUpgradeButton(snapshot, UpgradeTrack.AttackPower, attackPowerButton, attackPowerButtonText);
-            RefreshUpgradeButton(snapshot, UpgradeTrack.AttackSpeed, attackSpeedButton, attackSpeedButtonText);
-            RefreshUpgradeButton(snapshot, UpgradeTrack.Defense, defenseButton, defenseButtonText);
             RefreshUpgradeButton(snapshot, UpgradeTrack.MaxHealth, maxHealthButton, maxHealthButtonText);
+            RefreshUpgradeButton(snapshot, UpgradeTrack.HealthRegen, healthRegenButton, healthRegenButtonText);
+            RefreshUpgradeButton(snapshot, UpgradeTrack.Defense, defenseButton, defenseButtonText);
+            RefreshUpgradeButton(snapshot, UpgradeTrack.AttackSpeed, attackSpeedButton, attackSpeedButtonText);
             RefreshUpgradeButton(snapshot, UpgradeTrack.GoldGain, goldGainButton, goldGainButtonText);
 
             if (previousWaveButton != null)
@@ -289,9 +318,7 @@ namespace IdleGame
 
             if (buttonText != null && data.HasValue)
             {
-                buttonText.text = track == UpgradeTrack.GoldGain
-                    ? $"{GetUpgradeLabel(track)} +{Mathf.RoundToInt((data.Value.GoldGainMultiplier - 1f) * 100f)}% ({data.Value.NextCost}g)"
-                    : $"{GetUpgradeLabel(track)} Lv.{data.Value.Level} ({data.Value.NextCost}g)";
+                buttonText.text = BuildUpgradeButtonText(track, data.Value);
             }
 
             if (button != null && data.HasValue)
@@ -312,14 +339,19 @@ namespace IdleGame
                 attackSpeedButton.onClick.AddListener(RequestAttackSpeedUpgrade);
             }
 
-            if (defenseButton != null)
-            {
-                defenseButton.onClick.AddListener(RequestDefenseUpgrade);
-            }
-
             if (maxHealthButton != null)
             {
                 maxHealthButton.onClick.AddListener(RequestMaxHealthUpgrade);
+            }
+
+            if (healthRegenButton != null)
+            {
+                healthRegenButton.onClick.AddListener(RequestHealthRegenUpgrade);
+            }
+
+            if (defenseButton != null)
+            {
+                defenseButton.onClick.AddListener(RequestDefenseUpgrade);
             }
 
             if (goldGainButton != null)
@@ -360,14 +392,19 @@ namespace IdleGame
                 attackSpeedButton.onClick.RemoveListener(RequestAttackSpeedUpgrade);
             }
 
-            if (defenseButton != null)
-            {
-                defenseButton.onClick.RemoveListener(RequestDefenseUpgrade);
-            }
-
             if (maxHealthButton != null)
             {
                 maxHealthButton.onClick.RemoveListener(RequestMaxHealthUpgrade);
+            }
+
+            if (healthRegenButton != null)
+            {
+                healthRegenButton.onClick.RemoveListener(RequestHealthRegenUpgrade);
+            }
+
+            if (defenseButton != null)
+            {
+                defenseButton.onClick.RemoveListener(RequestDefenseUpgrade);
             }
 
             if (goldGainButton != null)
@@ -461,6 +498,36 @@ namespace IdleGame
             ownsRuntimeResetButton = true;
         }
 
+        private void EnsureUpgradeButtons()
+        {
+            if (HasAllUpgradeButtons())
+            {
+                EnsureUpgradeButtonLabels();
+                return;
+            }
+
+            var parent = GetUpgradeParent();
+            if (parent == null)
+            {
+                return;
+            }
+
+            ConfigureUpgradePanelRect(parent);
+
+            attackPowerButton = EnsureUpgradeButton(parent, attackPowerButton, "AttackPowerUpgradeButton", AttackPowerUpgradeButtonPosition, "Attack Lv.0 (10g)", ref ownsRuntimeUpgradeControls);
+            attackPowerButtonText = GetButtonLabel(attackPowerButton);
+            maxHealthButton = EnsureUpgradeButton(parent, maxHealthButton, "MaxHealthUpgradeButton", MaxHealthUpgradeButtonPosition, "Health Lv.0 (14g)", ref ownsRuntimeUpgradeControls);
+            maxHealthButtonText = GetButtonLabel(maxHealthButton);
+            healthRegenButton = EnsureUpgradeButton(parent, healthRegenButton, "HealthRegenUpgradeButton", HealthRegenUpgradeButtonPosition, "Regen +0.0/s (18g)", ref ownsRuntimeUpgradeControls);
+            healthRegenButtonText = GetButtonLabel(healthRegenButton);
+            defenseButton = EnsureUpgradeButton(parent, defenseButton, "DefenseUpgradeButton", DefenseUpgradeButtonPosition, "Defense Lv.0 (16g)", ref ownsRuntimeUpgradeControls);
+            defenseButtonText = GetButtonLabel(defenseButton);
+            attackSpeedButton = EnsureUpgradeButton(parent, attackSpeedButton, "AttackSpeedUpgradeButton", AttackSpeedUpgradeButtonPosition, "Speed Lv.0 (20g)", ref ownsRuntimeUpgradeControls);
+            attackSpeedButtonText = GetButtonLabel(attackSpeedButton);
+            goldGainButton = EnsureUpgradeButton(parent, goldGainButton, "GoldGainUpgradeButton", GoldGainUpgradeButtonPosition, "Bounty +0% (24g)", ref ownsRuntimeUpgradeControls);
+            goldGainButtonText = GetButtonLabel(goldGainButton);
+        }
+
         private void EnsureWaveTravelControls()
         {
             if (travelButtonText == null && travelButton != null)
@@ -525,6 +592,37 @@ namespace IdleGame
             travelButton = null;
             travelButtonText = null;
             ownsRuntimeWaveTravelControls = false;
+        }
+
+        private void DestroyRuntimeUpgradeControls()
+        {
+            if (!ownsRuntimeUpgradeControls)
+            {
+                return;
+            }
+
+            for (var index = 0; index < runtimeUpgradeObjects.Count; index++)
+            {
+                if (runtimeUpgradeObjects[index] != null)
+                {
+                    Destroy(runtimeUpgradeObjects[index]);
+                }
+            }
+
+            runtimeUpgradeObjects.Clear();
+            attackPowerButton = null;
+            attackPowerButtonText = null;
+            maxHealthButton = null;
+            maxHealthButtonText = null;
+            healthRegenButton = null;
+            healthRegenButtonText = null;
+            defenseButton = null;
+            defenseButtonText = null;
+            attackSpeedButton = null;
+            attackSpeedButtonText = null;
+            goldGainButton = null;
+            goldGainButtonText = null;
+            ownsRuntimeUpgradeControls = false;
         }
 
         private static TMP_Text CreateTravelLabel(RectTransform parent, string name, string text)
@@ -678,6 +776,63 @@ namespace IdleGame
             return button;
         }
 
+        private static Button CreateRuntimeUpgradeButton(RectTransform parent, string name, Vector2 anchoredPosition, string labelText)
+        {
+            var buttonObject = new GameObject(name, typeof(RectTransform), typeof(Image), typeof(Button));
+            buttonObject.transform.SetParent(parent, false);
+
+            var rectTransform = buttonObject.GetComponent<RectTransform>();
+            rectTransform.anchorMin = new Vector2(0f, 1f);
+            rectTransform.anchorMax = new Vector2(0f, 1f);
+            rectTransform.pivot = new Vector2(0f, 1f);
+            rectTransform.sizeDelta = RuntimeUpgradeButtonSize;
+            rectTransform.anchoredPosition = anchoredPosition;
+
+            var image = buttonObject.GetComponent<Image>();
+            image.color = new Color32(50, 72, 96, 220);
+
+            var button = buttonObject.GetComponent<Button>();
+            button.targetGraphic = image;
+
+            var labelObject = new GameObject("Label", typeof(RectTransform), typeof(TextMeshProUGUI));
+            labelObject.transform.SetParent(buttonObject.transform, false);
+
+            var labelRect = labelObject.GetComponent<RectTransform>();
+            labelRect.anchorMin = Vector2.zero;
+            labelRect.anchorMax = Vector2.one;
+            labelRect.offsetMin = new Vector2(14f, 8f);
+            labelRect.offsetMax = new Vector2(-14f, -8f);
+
+            var label = labelObject.GetComponent<TextMeshProUGUI>();
+            label.text = labelText;
+            label.fontSize = 24f;
+            label.alignment = TextAlignmentOptions.Center;
+            label.enableWordWrapping = false;
+            label.color = Color.white;
+            label.richText = false;
+
+            if (label.font == null && TMP_Settings.defaultFontAsset != null)
+            {
+                label.font = TMP_Settings.defaultFontAsset;
+            }
+
+            return button;
+        }
+
+        private static void ConfigureUpgradePanelRect(RectTransform rectTransform)
+        {
+            if (rectTransform == null)
+            {
+                return;
+            }
+
+            rectTransform.anchorMin = RuntimeUpgradePanelAnchor;
+            rectTransform.anchorMax = RuntimeUpgradePanelAnchor;
+            rectTransform.pivot = RuntimeUpgradePanelPivot;
+            rectTransform.anchoredPosition = RuntimeUpgradePanelPosition;
+            rectTransform.sizeDelta = RuntimeUpgradePanelSize;
+        }
+
         private static TMP_Text GetButtonLabel(Button button)
         {
             if (button == null)
@@ -715,6 +870,7 @@ namespace IdleGame
             {
                 UpgradeTrack.AttackPower => "Attack",
                 UpgradeTrack.MaxHealth => "Health",
+                UpgradeTrack.HealthRegen => "Regen",
                 UpgradeTrack.Defense => "Defense",
                 UpgradeTrack.AttackSpeed => "Speed",
                 UpgradeTrack.GoldGain => "Bounty",
@@ -726,6 +882,140 @@ namespace IdleGame
         {
             var data = GetUpgradeViewData(snapshot, UpgradeTrack.GoldGain);
             return data.HasValue ? Mathf.Max(1f, data.Value.GoldGainMultiplier) : 1f;
+        }
+
+        private static float GetHealthRegenPerSecond(GameSnapshot snapshot)
+        {
+            var data = GetUpgradeViewData(snapshot, UpgradeTrack.HealthRegen);
+            return data.HasValue ? Mathf.Max(0f, data.Value.HealthRegenPerSecond) : 0f;
+        }
+
+        private static string BuildUpgradeButtonText(UpgradeTrack track, UpgradeViewData data)
+        {
+            return track switch
+            {
+                UpgradeTrack.GoldGain => $"{GetUpgradeLabel(track)} +{Mathf.RoundToInt((data.GoldGainMultiplier - 1f) * 100f)}% ({data.NextCost}g)",
+                UpgradeTrack.HealthRegen => $"{GetUpgradeLabel(track)} +{data.HealthRegenPerSecond:0.0}/s ({data.NextCost}g)",
+                _ => $"{GetUpgradeLabel(track)} Lv.{data.Level} ({data.NextCost}g)",
+            };
+        }
+
+        private void EnsureUpgradeButtonLabels()
+        {
+            if (attackPowerButtonText == null && attackPowerButton != null)
+            {
+                attackPowerButtonText = GetButtonLabel(attackPowerButton);
+            }
+
+            if (maxHealthButtonText == null && maxHealthButton != null)
+            {
+                maxHealthButtonText = GetButtonLabel(maxHealthButton);
+            }
+
+            if (healthRegenButtonText == null && healthRegenButton != null)
+            {
+                healthRegenButtonText = GetButtonLabel(healthRegenButton);
+            }
+
+            if (defenseButtonText == null && defenseButton != null)
+            {
+                defenseButtonText = GetButtonLabel(defenseButton);
+            }
+
+            if (attackSpeedButtonText == null && attackSpeedButton != null)
+            {
+                attackSpeedButtonText = GetButtonLabel(attackSpeedButton);
+            }
+
+            if (goldGainButtonText == null && goldGainButton != null)
+            {
+                goldGainButtonText = GetButtonLabel(goldGainButton);
+            }
+        }
+
+        private RectTransform GetUpgradeRootParent()
+        {
+            if (attackPowerButton != null && attackPowerButton.transform.parent is RectTransform existingParent)
+            {
+                return existingParent;
+            }
+
+            if (maxHealthButton != null && maxHealthButton.transform.parent is RectTransform healthParent)
+            {
+                return healthParent;
+            }
+
+            if (playerStatsText != null && playerStatsText.rectTransform.parent is RectTransform statsParent)
+            {
+                return statsParent;
+            }
+
+            if (goldText != null && goldText.rectTransform.parent is RectTransform goldParent)
+            {
+                return goldParent;
+            }
+
+            return transform as RectTransform;
+        }
+
+        private bool HasAllUpgradeButtons()
+        {
+            return attackPowerButton != null
+                && maxHealthButton != null
+                && healthRegenButton != null
+                && defenseButton != null
+                && attackSpeedButton != null
+                && goldGainButton != null;
+        }
+
+        private RectTransform GetUpgradeParent()
+        {
+            var existingParent = GetUpgradeRootParent();
+            if (existingParent == null)
+            {
+                return null;
+            }
+
+            if (HasAnyUpgradeButton())
+            {
+                return existingParent;
+            }
+
+            var panelObject = new GameObject("RuntimeUpgradesPanel", typeof(RectTransform));
+            panelObject.transform.SetParent(existingParent, false);
+            runtimeUpgradeObjects.Add(panelObject);
+
+            var panelRect = panelObject.GetComponent<RectTransform>();
+            panelRect.anchorMin = RuntimeUpgradePanelAnchor;
+            panelRect.anchorMax = RuntimeUpgradePanelAnchor;
+            panelRect.pivot = RuntimeUpgradePanelPivot;
+            panelRect.anchoredPosition = RuntimeUpgradePanelPosition;
+            panelRect.sizeDelta = RuntimeUpgradePanelSize;
+            ownsRuntimeUpgradeControls = true;
+            return panelRect;
+        }
+
+        private bool HasAnyUpgradeButton()
+        {
+            return attackPowerButton != null
+                || maxHealthButton != null
+                || healthRegenButton != null
+                || defenseButton != null
+                || attackSpeedButton != null
+                || goldGainButton != null;
+        }
+
+        private Button EnsureUpgradeButton(RectTransform parent, Button existingButton, string name, Vector2 position, string labelText, ref bool ownsRuntimeControls)
+        {
+            if (existingButton != null)
+            {
+                return existingButton;
+            }
+
+            ownsRuntimeControls = true;
+            var createdButton = CreateRuntimeUpgradeButton(parent, name, position, labelText);
+            runtimeUpgradeObjects.Add(createdButton.gameObject);
+            return createdButton;
         }
     }
 }

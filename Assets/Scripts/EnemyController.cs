@@ -94,6 +94,7 @@ namespace IdleGame
             new("Boar", "Heavy", 2.6f, 1.45f, 0.8f, 4f),
             new("Wisp", "Frenzy", 2.15f, 1.2f, 1.5f, 4.6f),
             new("Bandit", "Executioner", 2.35f, 1.95f, 0.65f, 5.1f),
+            new("Golem", "Bulwark", 3.15f, 1.65f, 0.72f, 5.8f),
         };
 
         [SerializeField]
@@ -224,6 +225,7 @@ namespace IdleGame
                 new EnemyArchetypeStage(11, "Boar", 1.3f, 1.05f, 0.85f, 1.2f),
                 new EnemyArchetypeStage(21, "Wisp", 1.1f, 1.25f, 1.3f, 1.45f),
                 new EnemyArchetypeStage(31, "Bandit", 1.25f, 1.55f, 1.05f, 1.7f),
+                new EnemyArchetypeStage(41, "Golem", 1.9f, 1.7f, 0.78f, 2.1f),
             };
         }
 

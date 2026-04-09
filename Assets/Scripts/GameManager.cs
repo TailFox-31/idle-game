@@ -6,12 +6,13 @@ namespace IdleGame
 {
     public readonly struct UpgradeViewData
     {
-        public UpgradeViewData(UpgradeTrack track, int level, int nextCost, float goldGainMultiplier)
+        public UpgradeViewData(UpgradeTrack track, int level, int nextCost, float goldGainMultiplier, float healthRegenPerSecond)
         {
             Track = track;
             Level = level;
             NextCost = nextCost;
             GoldGainMultiplier = goldGainMultiplier;
+            HealthRegenPerSecond = healthRegenPerSecond;
         }
 
         public UpgradeTrack Track { get; }
@@ -21,6 +22,8 @@ namespace IdleGame
         public int NextCost { get; }
 
         public float GoldGainMultiplier { get; }
+
+        public float HealthRegenPerSecond { get; }
     }
 
     public readonly struct GameSnapshot
@@ -135,6 +138,7 @@ namespace IdleGame
         {
             new UpgradeDefinition(UpgradeTrack.AttackPower, 10, 1.28f, attackPowerPerLevel: 1),
             new UpgradeDefinition(UpgradeTrack.MaxHealth, 14, 1.34f, maxHealthPerLevel: 10),
+            new UpgradeDefinition(UpgradeTrack.HealthRegen, 18, 1.40f, healthRegenPerSecondPerLevel: 0.6f),
             new UpgradeDefinition(UpgradeTrack.Defense, 16, 1.38f, flatDamageReductionPerLevel: 1),
             new UpgradeDefinition(UpgradeTrack.AttackSpeed, 20, 1.42f, attackSpeedPerLevel: 0.12f),
             new UpgradeDefinition(UpgradeTrack.GoldGain, 24, 1.48f, goldGainMultiplierPerLevel: 0.12f),
@@ -343,6 +347,7 @@ namespace IdleGame
             {
                 new UpgradeDefinition(UpgradeTrack.AttackPower, 10, 1.28f, attackPowerPerLevel: 1),
                 new UpgradeDefinition(UpgradeTrack.MaxHealth, 14, 1.34f, maxHealthPerLevel: 10),
+                new UpgradeDefinition(UpgradeTrack.HealthRegen, 18, 1.40f, healthRegenPerSecondPerLevel: 0.6f),
                 new UpgradeDefinition(UpgradeTrack.Defense, 16, 1.38f, flatDamageReductionPerLevel: 1),
                 new UpgradeDefinition(UpgradeTrack.AttackSpeed, 20, 1.42f, attackSpeedPerLevel: 0.12f),
                 new UpgradeDefinition(UpgradeTrack.GoldGain, 24, 1.48f, goldGainMultiplierPerLevel: 0.12f),
@@ -426,7 +431,8 @@ namespace IdleGame
                     state.Definition.Track,
                     state.Level,
                     state.CurrentCost,
-                    state.Definition.GetGoldGainMultiplier(state.Level));
+                    state.Definition.GetGoldGainMultiplier(state.Level),
+                    state.Definition.GetHealthRegenPerSecond(state.Level));
             }
 
             var battle = battleSystem != null

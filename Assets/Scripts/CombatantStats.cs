@@ -18,6 +18,9 @@ namespace IdleGame
         [SerializeField, Min(0)]
         private int flatDamageReduction;
 
+        [SerializeField, Min(0f)]
+        private float healthRegenPerSecond;
+
         public int MaxHealth => maxHealth;
 
         public int AttackPower => attackPower;
@@ -26,53 +29,61 @@ namespace IdleGame
 
         public int FlatDamageReduction => flatDamageReduction;
 
-        public CombatantStats(int maxHealth, int attackPower, float attacksPerSecond, int flatDamageReduction = 0)
+        public float HealthRegenPerSecond => healthRegenPerSecond;
+
+        public CombatantStats(int maxHealth, int attackPower, float attacksPerSecond, int flatDamageReduction = 0, float healthRegenPerSecond = 0f)
         {
             this.maxHealth = Mathf.Max(1, maxHealth);
             this.attackPower = Mathf.Max(1, attackPower);
             this.attacksPerSecond = Mathf.Max(0.1f, attacksPerSecond);
             this.flatDamageReduction = Mathf.Max(0, flatDamageReduction);
+            this.healthRegenPerSecond = Mathf.Max(0f, healthRegenPerSecond);
         }
 
         public float AttackInterval => 1f / AttacksPerSecond;
 
-        public CombatantStats With(int? maxHealth = null, int? attackPower = null, float? attacksPerSecond = null, int? flatDamageReduction = null)
+        public CombatantStats With(int? maxHealth = null, int? attackPower = null, float? attacksPerSecond = null, int? flatDamageReduction = null, float? healthRegenPerSecond = null)
         {
             return new CombatantStats(
                 maxHealth ?? MaxHealth,
                 attackPower ?? AttackPower,
                 attacksPerSecond ?? AttacksPerSecond,
-                flatDamageReduction ?? FlatDamageReduction);
+                flatDamageReduction ?? FlatDamageReduction,
+                healthRegenPerSecond ?? HealthRegenPerSecond);
         }
 
-        public CombatantStats Add(int maxHealth = 0, int attackPower = 0, float attacksPerSecond = 0f, int flatDamageReduction = 0)
+        public CombatantStats Add(int maxHealth = 0, int attackPower = 0, float attacksPerSecond = 0f, int flatDamageReduction = 0, float healthRegenPerSecond = 0f)
         {
             return new CombatantStats(
                 MaxHealth + maxHealth,
                 AttackPower + attackPower,
                 AttacksPerSecond + attacksPerSecond,
-                FlatDamageReduction + flatDamageReduction);
+                FlatDamageReduction + flatDamageReduction,
+                HealthRegenPerSecond + healthRegenPerSecond);
         }
 
-        public CombatantStats Multiply(float healthMultiplier = 1f, float attackPowerMultiplier = 1f, float attacksPerSecondMultiplier = 1f, float flatDamageReductionMultiplier = 1f)
+        public CombatantStats Multiply(float healthMultiplier = 1f, float attackPowerMultiplier = 1f, float attacksPerSecondMultiplier = 1f, float flatDamageReductionMultiplier = 1f, float healthRegenPerSecondMultiplier = 1f)
         {
             return new CombatantStats(
                 Mathf.Max(1, Mathf.RoundToInt(MaxHealth * Mathf.Max(0f, healthMultiplier))),
                 Mathf.Max(1, Mathf.RoundToInt(AttackPower * Mathf.Max(0f, attackPowerMultiplier))),
                 Mathf.Max(0.1f, AttacksPerSecond * Mathf.Max(0f, attacksPerSecondMultiplier)),
-                Mathf.Max(0, Mathf.RoundToInt(FlatDamageReduction * Mathf.Max(0f, flatDamageReductionMultiplier))));
+                Mathf.Max(0, Mathf.RoundToInt(FlatDamageReduction * Mathf.Max(0f, flatDamageReductionMultiplier))),
+                Mathf.Max(0f, HealthRegenPerSecond * Mathf.Max(0f, healthRegenPerSecondMultiplier)));
         }
     }
 
     public sealed class CombatantRuntime
     {
         private float attackCooldown;
+        private float pendingRegen;
 
         public CombatantRuntime(CombatantStats stats)
         {
             Stats = stats;
             CurrentHealth = stats.MaxHealth;
             attackCooldown = 0f;
+            pendingRegen = 0f;
         }
 
         public CombatantStats Stats { get; private set; }
@@ -86,6 +97,7 @@ namespace IdleGame
             Stats = stats;
             CurrentHealth = stats.MaxHealth;
             attackCooldown = 0f;
+            pendingRegen = 0f;
         }
 
         public void SetStats(CombatantStats stats)
@@ -93,6 +105,7 @@ namespace IdleGame
             Stats = stats;
             CurrentHealth = Mathf.Clamp(CurrentHealth, 0, stats.MaxHealth);
             attackCooldown = 0f;
+            pendingRegen = 0f;
         }
 
         public void SetCurrentHealth(int currentHealth)
@@ -114,6 +127,43 @@ namespace IdleGame
             }
 
             attackCooldown += Stats.AttackInterval;
+            return true;
+        }
+
+        public bool TryRegenerate(float deltaTime)
+        {
+            if (!IsAlive)
+            {
+                pendingRegen = 0f;
+                return false;
+            }
+
+            if (deltaTime <= 0f || Stats.HealthRegenPerSecond <= 0f)
+            {
+                return false;
+            }
+
+            if (CurrentHealth >= Stats.MaxHealth)
+            {
+                pendingRegen = 0f;
+                return false;
+            }
+
+            pendingRegen += Stats.HealthRegenPerSecond * deltaTime;
+            var appliedHealing = Mathf.FloorToInt(pendingRegen);
+            if (appliedHealing <= 0)
+            {
+                return false;
+            }
+
+            pendingRegen -= appliedHealing;
+            var healedHealth = Mathf.Min(Stats.MaxHealth, CurrentHealth + appliedHealing);
+            if (healedHealth == CurrentHealth)
+            {
+                return false;
+            }
+
+            CurrentHealth = healedHealth;
             return true;
         }
 
