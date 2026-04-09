@@ -75,7 +75,7 @@ public static class IdleGamePrototypeSceneBuilder
         var goldReadout = EnsureReadout(headerPanel, GoldReadoutName, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(20f, -20f), "G 0 | Loot +0% | W1 | N5");
         var playerStatsReadout = EnsureReadout(headerPanel, PlayerStatsReadoutName, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(20f, -66f), "ATK 0 | SPD 0.00 | DEF 0");
         var enemyStatusReadout = EnsureReadout(headerPanel, EnemyStatusReadoutName, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-20f, -20f), "Enemy HP 0/0");
-        enemyStatusReadout.alignment = TextAlignmentOptions.TopRight;
+        ConfigureEnemyReadout(enemyStatusReadout);
         var resetSaveButton = EnsureButton(headerPanel, ResetSaveButtonName, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-20f, -66f), "Reset Save", new Vector2(180f, 44f), 20f);
         resetSaveButton.GetComponent<Image>().color = new Color32(122, 54, 54, 220);
         var waveTravelPanel = EnsureChildRectTransform(headerPanel, WaveTravelPanelName);
@@ -286,6 +286,22 @@ public static class IdleGamePrototypeSceneBuilder
         }
 
         return label;
+    }
+
+    private static void ConfigureEnemyReadout(TMP_Text readout)
+    {
+        if (readout == null)
+        {
+            return;
+        }
+
+        var rectTransform = readout.rectTransform;
+        rectTransform.sizeDelta = new Vector2(620f, 58f);
+
+        readout.fontSize = 24f;
+        readout.alignment = TextAlignmentOptions.TopRight;
+        readout.enableWordWrapping = false;
+        readout.richText = true;
     }
 
     private static Button EnsureButton(
