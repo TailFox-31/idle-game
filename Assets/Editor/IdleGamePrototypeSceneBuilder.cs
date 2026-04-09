@@ -10,6 +10,17 @@ using UnityEngine.UI;
 
 public static class IdleGamePrototypeSceneBuilder
 {
+    private static readonly Vector2 WaveTravelPanelAnchor = new(1f, 1f);
+    private static readonly Vector2 WaveTravelPanelPivot = new(1f, 1f);
+    private static readonly Vector2 WaveTravelPanelPosition = new(-20f, -122f);
+    private static readonly Vector2 WaveTravelPanelSize = new(360f, 118f);
+    private static readonly Vector2 WaveTravelReadoutSize = new(360f, 52f);
+    private static readonly Vector2 PreviousWaveButtonPosition = new(0f, -64f);
+    private static readonly Vector2 NextWaveButtonPosition = new(92f, -64f);
+    private static readonly Vector2 TravelButtonPosition = new(184f, -64f);
+    private static readonly Vector2 WaveTravelStepButtonSize = new(84f, 44f);
+    private static readonly Vector2 WaveTravelButtonSize = new(176f, 44f);
+
     private const string MenuItemPath = "Tools/Idle Game/Build Or Refresh Prototype Scene Setup";
     private const string PrototypeCanvasName = "PrototypeCanvas";
     private const string UiRootName = "PrototypeUI";
@@ -69,13 +80,13 @@ public static class IdleGamePrototypeSceneBuilder
         var waveTravelPanel = EnsureChildRectTransform(headerPanel, WaveTravelPanelName);
         ConfigureWaveTravelPanel(waveTravelPanel);
         var startWaveReadout = EnsureReadout(waveTravelPanel, StartWaveReadoutName, new Vector2(0f, 1f), new Vector2(1f, 1f), Vector2.zero, "Now W1\nTarget W1 | Best W1");
-        startWaveReadout.rectTransform.sizeDelta = new Vector2(360f, 52f);
-        startWaveReadout.alignment = TextAlignmentOptions.TopRight;
-        startWaveReadout.fontSize = 20f;
-        startWaveReadout.richText = true;
-        var previousWaveButton = EnsureButton(waveTravelPanel, PreviousWaveButtonName, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, -64f), "Prev", new Vector2(84f, 44f), 20f);
-        var nextWaveButton = EnsureButton(waveTravelPanel, NextWaveButtonName, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(92f, -64f), "Next", new Vector2(84f, 44f), 20f);
-        var travelButton = EnsureButton(waveTravelPanel, TravelButtonName, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(184f, -64f), "Travel to W1", new Vector2(176f, 44f), 18f);
+        ConfigureWaveTravelReadout(startWaveReadout);
+        var previousWaveButton = EnsureButton(waveTravelPanel, PreviousWaveButtonName, new Vector2(0f, 1f), new Vector2(0f, 1f), PreviousWaveButtonPosition, "Prev", WaveTravelStepButtonSize, 20f);
+        ConfigureWaveTravelButton(previousWaveButton, PreviousWaveButtonPosition, WaveTravelStepButtonSize);
+        var nextWaveButton = EnsureButton(waveTravelPanel, NextWaveButtonName, new Vector2(0f, 1f), new Vector2(0f, 1f), NextWaveButtonPosition, "Next", WaveTravelStepButtonSize, 20f);
+        ConfigureWaveTravelButton(nextWaveButton, NextWaveButtonPosition, WaveTravelStepButtonSize);
+        var travelButton = EnsureButton(waveTravelPanel, TravelButtonName, new Vector2(0f, 1f), new Vector2(0f, 1f), TravelButtonPosition, "Travel to W1", WaveTravelButtonSize, 18f);
+        ConfigureWaveTravelButton(travelButton, TravelButtonPosition, WaveTravelButtonSize);
 
         var upgradesPanel = EnsureChildRectTransform(uiRoot, UpgradesPanelName);
         ConfigureUpgradePanel(upgradesPanel);
@@ -330,11 +341,38 @@ public static class IdleGamePrototypeSceneBuilder
 
     private static void ConfigureWaveTravelPanel(RectTransform rectTransform)
     {
-        rectTransform.anchorMin = new Vector2(1f, 1f);
+        rectTransform.anchorMin = WaveTravelPanelAnchor;
+        rectTransform.anchorMax = WaveTravelPanelAnchor;
+        rectTransform.pivot = WaveTravelPanelPivot;
+        rectTransform.anchoredPosition = WaveTravelPanelPosition;
+        rectTransform.sizeDelta = WaveTravelPanelSize;
+    }
+
+    private static void ConfigureWaveTravelReadout(TMP_Text readout)
+    {
+        var rectTransform = readout.rectTransform;
+        rectTransform.anchorMin = new Vector2(0f, 1f);
         rectTransform.anchorMax = new Vector2(1f, 1f);
         rectTransform.pivot = new Vector2(1f, 1f);
-        rectTransform.anchoredPosition = new Vector2(-20f, -122f);
-        rectTransform.sizeDelta = new Vector2(360f, 118f);
+        rectTransform.sizeDelta = WaveTravelReadoutSize;
+        rectTransform.anchoredPosition = Vector2.zero;
+        rectTransform.offsetMin = new Vector2(0f, -52f);
+        rectTransform.offsetMax = Vector2.zero;
+
+        readout.alignment = TextAlignmentOptions.TopRight;
+        readout.fontSize = 20f;
+        readout.enableWordWrapping = false;
+        readout.richText = true;
+    }
+
+    private static void ConfigureWaveTravelButton(Button button, Vector2 anchoredPosition, Vector2 sizeDelta)
+    {
+        var rectTransform = button.GetComponent<RectTransform>();
+        rectTransform.anchorMin = new Vector2(0f, 1f);
+        rectTransform.anchorMax = new Vector2(0f, 1f);
+        rectTransform.pivot = new Vector2(0f, 1f);
+        rectTransform.anchoredPosition = anchoredPosition;
+        rectTransform.sizeDelta = sizeDelta;
     }
 
     private static void ConfigureUpgradePanel(RectTransform rectTransform)
