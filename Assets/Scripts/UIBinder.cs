@@ -6,6 +6,18 @@ namespace IdleGame
 {
     public sealed class UIBinder : MonoBehaviour
     {
+        private static readonly Vector2 WaveTravelPanelAnchor = new(1f, 1f);
+        private static readonly Vector2 WaveTravelPanelPivot = new(1f, 1f);
+        private static readonly Vector2 WaveTravelPanelSize = new(360f, 118f);
+        private static readonly Vector2 WaveTravelPanelPosition = new(-20f, -122f);
+        private static readonly Vector2 WaveTravelReadoutSize = new(360f, 52f);
+        private static readonly Vector2 WaveTravelReadoutTopOffset = new(0f, -52f);
+        private static readonly Vector2 WaveTravelButtonSize = new(84f, 44f);
+        private static readonly Vector2 TravelButtonSize = new(176f, 44f);
+        private static readonly Vector2 PreviousWaveButtonPosition = new(0f, -64f);
+        private static readonly Vector2 NextWaveButtonPosition = new(92f, -64f);
+        private static readonly Vector2 TravelButtonPosition = new(184f, -64f);
+
         [Header("Readouts")]
         [SerializeField]
         private TMP_Text goldText;
@@ -139,7 +151,7 @@ namespace IdleGame
         {
             EnsureResetSaveButton();
             EnsureWaveTravelControls();
-            ConfigureWaveTravelReadout();
+            ConfigureWaveTravelLayout();
             RegisterButtons();
         }
 
@@ -471,16 +483,12 @@ namespace IdleGame
             panelObject.transform.SetParent(parent, false);
 
             var panelRect = panelObject.GetComponent<RectTransform>();
-            panelRect.anchorMin = new Vector2(1f, 1f);
-            panelRect.anchorMax = new Vector2(1f, 1f);
-            panelRect.pivot = new Vector2(1f, 1f);
-            panelRect.sizeDelta = new Vector2(360f, 118f);
-            panelRect.anchoredPosition = new Vector2(-20f, -122f);
+            ConfigureWaveTravelPanelRect(panelRect);
 
             startWaveText = CreateTravelLabel(panelRect, "StartWaveLabel", "Now W1\nTarget W1 | Best W1");
-            previousWaveButton = CreateTravelButton(panelRect, "PrevWaveButton", new Vector2(0f, -64f), new Vector2(84f, 44f), "Prev");
-            nextWaveButton = CreateTravelButton(panelRect, "NextWaveButton", new Vector2(92f, -64f), new Vector2(84f, 44f), "Next");
-            travelButton = CreateTravelButton(panelRect, "TravelWaveButton", new Vector2(184f, -64f), new Vector2(176f, 44f), "Travel to W1");
+            previousWaveButton = CreateTravelButton(panelRect, "PrevWaveButton", PreviousWaveButtonPosition, WaveTravelButtonSize, "Prev");
+            nextWaveButton = CreateTravelButton(panelRect, "NextWaveButton", NextWaveButtonPosition, WaveTravelButtonSize, "Next");
+            travelButton = CreateTravelButton(panelRect, "TravelWaveButton", TravelButtonPosition, TravelButtonSize, "Travel to W1");
             travelButtonText = GetButtonLabel(travelButton);
 
             ownsRuntimeWaveTravelControls = true;
@@ -546,6 +554,37 @@ namespace IdleGame
             return label;
         }
 
+        private void ConfigureWaveTravelLayout()
+        {
+            RectTransform panelRect = null;
+            if (startWaveText != null)
+            {
+                panelRect = startWaveText.rectTransform.parent as RectTransform;
+            }
+            else if (travelButton != null)
+            {
+                panelRect = travelButton.transform.parent as RectTransform;
+            }
+            else if (previousWaveButton != null)
+            {
+                panelRect = previousWaveButton.transform.parent as RectTransform;
+            }
+            else if (nextWaveButton != null)
+            {
+                panelRect = nextWaveButton.transform.parent as RectTransform;
+            }
+
+            if (panelRect != null)
+            {
+                ConfigureWaveTravelPanelRect(panelRect);
+            }
+
+            ConfigureWaveTravelReadout();
+            ConfigureWaveTravelButton(previousWaveButton, PreviousWaveButtonPosition, WaveTravelButtonSize);
+            ConfigureWaveTravelButton(nextWaveButton, NextWaveButtonPosition, WaveTravelButtonSize);
+            ConfigureWaveTravelButton(travelButton, TravelButtonPosition, TravelButtonSize);
+        }
+
         private void ConfigureWaveTravelReadout()
         {
             if (startWaveText == null)
@@ -557,10 +596,43 @@ namespace IdleGame
             startWaveText.enableWordWrapping = false;
             startWaveText.alignment = TextAlignmentOptions.TopRight;
 
-            if (startWaveText.rectTransform != null)
+            var rectTransform = startWaveText.rectTransform;
+            rectTransform.anchorMin = new Vector2(0f, 1f);
+            rectTransform.anchorMax = new Vector2(1f, 1f);
+            rectTransform.pivot = new Vector2(1f, 1f);
+            rectTransform.sizeDelta = WaveTravelReadoutSize;
+            rectTransform.anchoredPosition = Vector2.zero;
+            rectTransform.offsetMin = new Vector2(0f, WaveTravelReadoutTopOffset.y);
+            rectTransform.offsetMax = Vector2.zero;
+        }
+
+        private static void ConfigureWaveTravelPanelRect(RectTransform rectTransform)
+        {
+            if (rectTransform == null)
             {
-                startWaveText.rectTransform.sizeDelta = new Vector2(360f, 52f);
+                return;
             }
+
+            rectTransform.anchorMin = WaveTravelPanelAnchor;
+            rectTransform.anchorMax = WaveTravelPanelAnchor;
+            rectTransform.pivot = WaveTravelPanelPivot;
+            rectTransform.sizeDelta = WaveTravelPanelSize;
+            rectTransform.anchoredPosition = WaveTravelPanelPosition;
+        }
+
+        private static void ConfigureWaveTravelButton(Button button, Vector2 anchoredPosition, Vector2 sizeDelta)
+        {
+            if (button == null)
+            {
+                return;
+            }
+
+            var rectTransform = button.GetComponent<RectTransform>();
+            rectTransform.anchorMin = new Vector2(0f, 1f);
+            rectTransform.anchorMax = new Vector2(0f, 1f);
+            rectTransform.pivot = new Vector2(0f, 1f);
+            rectTransform.sizeDelta = sizeDelta;
+            rectTransform.anchoredPosition = anchoredPosition;
         }
 
         private static Button CreateTravelButton(RectTransform parent, string name, Vector2 anchoredPosition, Vector2 sizeDelta, string labelText)
