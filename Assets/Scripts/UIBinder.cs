@@ -7,6 +7,7 @@ namespace IdleGame
 {
     public sealed class UIBinder : MonoBehaviour
     {
+        private static readonly Vector2 EnemyReadoutPosition = new(-20f, -20f);
         private static readonly Vector2 WaveTravelPanelAnchor = new(1f, 1f);
         private static readonly Vector2 WaveTravelPanelPivot = new(1f, 1f);
         private static readonly Vector2 WaveTravelPanelSize = new(360f, 118f);
@@ -14,6 +15,8 @@ namespace IdleGame
         private static readonly Vector2 WaveTravelReadoutSize = new(360f, 52f);
         private static readonly Vector2 WaveTravelReadoutTopOffset = new(0f, -52f);
         private static readonly Vector2 EnemyReadoutSize = new(620f, 58f);
+        private static readonly Vector2 ResetSaveButtonSize = new(180f, 44f);
+        private static readonly Vector2 ResetSaveButtonPosition = new(-20f, -72f);
         private static readonly Vector2 WaveTravelButtonSize = new(84f, 44f);
         private static readonly Vector2 TravelButtonSize = new(176f, 44f);
         private static readonly Vector2 PreviousWaveButtonPosition = new(0f, -64f);
@@ -461,8 +464,8 @@ namespace IdleGame
             rectTransform.anchorMin = new Vector2(1f, 1f);
             rectTransform.anchorMax = new Vector2(1f, 1f);
             rectTransform.pivot = new Vector2(1f, 1f);
-            rectTransform.sizeDelta = new Vector2(180f, 44f);
-            rectTransform.anchoredPosition = new Vector2(-20f, -66f);
+            rectTransform.sizeDelta = ResetSaveButtonSize;
+            rectTransform.anchoredPosition = ResetSaveButtonPosition;
 
             var image = buttonObject.GetComponent<Image>();
             image.color = new Color32(122, 54, 54, 220);
@@ -714,6 +717,10 @@ namespace IdleGame
             enemyText.fontSize = 24f;
 
             var rectTransform = enemyText.rectTransform;
+            rectTransform.anchorMin = new Vector2(1f, 1f);
+            rectTransform.anchorMax = new Vector2(1f, 1f);
+            rectTransform.pivot = new Vector2(1f, 1f);
+            rectTransform.anchoredPosition = EnemyReadoutPosition;
             rectTransform.sizeDelta = EnemyReadoutSize;
         }
 

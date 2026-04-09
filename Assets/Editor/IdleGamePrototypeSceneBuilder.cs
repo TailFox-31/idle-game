@@ -10,6 +10,10 @@ using UnityEngine.UI;
 
 public static class IdleGamePrototypeSceneBuilder
 {
+    private static readonly Vector2 EnemyStatusReadoutPosition = new(-20f, -20f);
+    private static readonly Vector2 EnemyStatusReadoutSize = new(620f, 58f);
+    private static readonly Vector2 ResetSaveButtonPosition = new(-20f, -72f);
+    private static readonly Vector2 ResetSaveButtonSize = new(180f, 44f);
     private static readonly Vector2 WaveTravelPanelAnchor = new(1f, 1f);
     private static readonly Vector2 WaveTravelPanelPivot = new(1f, 1f);
     private static readonly Vector2 WaveTravelPanelPosition = new(-20f, -122f);
@@ -74,9 +78,9 @@ public static class IdleGamePrototypeSceneBuilder
 
         var goldReadout = EnsureReadout(headerPanel, GoldReadoutName, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(20f, -20f), "G 0 | Loot +0% | W1 | N5");
         var playerStatsReadout = EnsureReadout(headerPanel, PlayerStatsReadoutName, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(20f, -66f), "ATK 0 | SPD 0.00 | DEF 0");
-        var enemyStatusReadout = EnsureReadout(headerPanel, EnemyStatusReadoutName, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-20f, -20f), "Enemy HP 0/0");
+        var enemyStatusReadout = EnsureReadout(headerPanel, EnemyStatusReadoutName, new Vector2(1f, 1f), new Vector2(1f, 1f), EnemyStatusReadoutPosition, "Enemy HP 0/0");
         ConfigureEnemyReadout(enemyStatusReadout);
-        var resetSaveButton = EnsureButton(headerPanel, ResetSaveButtonName, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-20f, -66f), "Reset Save", new Vector2(180f, 44f), 20f);
+        var resetSaveButton = EnsureButton(headerPanel, ResetSaveButtonName, new Vector2(1f, 1f), new Vector2(1f, 1f), ResetSaveButtonPosition, "Reset Save", ResetSaveButtonSize, 20f);
         resetSaveButton.GetComponent<Image>().color = new Color32(122, 54, 54, 220);
         var waveTravelPanel = EnsureChildRectTransform(headerPanel, WaveTravelPanelName);
         ConfigureWaveTravelPanel(waveTravelPanel);
@@ -296,7 +300,7 @@ public static class IdleGamePrototypeSceneBuilder
         }
 
         var rectTransform = readout.rectTransform;
-        rectTransform.sizeDelta = new Vector2(620f, 58f);
+        rectTransform.sizeDelta = EnemyStatusReadoutSize;
 
         readout.fontSize = 24f;
         readout.alignment = TextAlignmentOptions.TopRight;
