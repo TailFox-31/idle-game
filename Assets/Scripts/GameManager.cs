@@ -315,7 +315,43 @@ namespace IdleGame
 
         private static List<UpgradeDefinition> BuildNormalizedUpgradeDefinitions(List<UpgradeDefinition> definitions)
         {
-            return BuildDefaultUpgradeDefinitions();
+            var normalized = BuildDefaultUpgradeDefinitions();
+            if (definitions == null)
+            {
+                return normalized;
+            }
+
+            for (var i = 0; i < definitions.Count; i++)
+            {
+                var candidate = definitions[i];
+                if (candidate == null)
+                {
+                    continue;
+                }
+
+                var normalizedIndex = GetDefinitionIndex(normalized, candidate.Track);
+                if (normalizedIndex < 0)
+                {
+                    continue;
+                }
+
+                normalized[normalizedIndex] = candidate;
+            }
+
+            return normalized;
+        }
+
+        private static int GetDefinitionIndex(List<UpgradeDefinition> definitions, UpgradeTrack track)
+        {
+            for (var i = 0; i < definitions.Count; i++)
+            {
+                if (definitions[i] != null && definitions[i].Track == track)
+                {
+                    return i;
+                }
+            }
+
+            return -1;
         }
 
         private static List<UpgradeDefinition> BuildDefaultUpgradeDefinitions()
