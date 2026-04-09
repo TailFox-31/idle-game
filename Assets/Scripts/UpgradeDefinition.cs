@@ -102,6 +102,34 @@ namespace IdleGame
             return Mathf.Max(0f, healthRegenPerSecondPerLevel * level);
         }
 
+        public int GetAttackPowerBonus(int level)
+        {
+            return track == UpgradeTrack.AttackPower
+                ? Mathf.Max(0, attackPowerPerLevel * Mathf.Max(0, level))
+                : 0;
+        }
+
+        public int GetMaxHealthBonus(int level)
+        {
+            return track == UpgradeTrack.MaxHealth
+                ? Mathf.Max(0, maxHealthPerLevel * Mathf.Max(0, level))
+                : 0;
+        }
+
+        public float GetAttackSpeedBonus(int level)
+        {
+            return track == UpgradeTrack.AttackSpeed
+                ? Mathf.Max(0f, attackSpeedPerLevel * Mathf.Max(0, level))
+                : 0f;
+        }
+
+        public int GetFlatDamageReduction(int level)
+        {
+            return track == UpgradeTrack.Defense
+                ? Mathf.Max(0, flatDamageReductionPerLevel * Mathf.Max(0, level))
+                : 0;
+        }
+
         public CombatantStats Apply(CombatantStats stats, int level)
         {
             if (level <= 0)

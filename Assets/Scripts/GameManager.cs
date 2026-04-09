@@ -6,11 +6,24 @@ namespace IdleGame
 {
     public readonly struct UpgradeViewData
     {
-        public UpgradeViewData(UpgradeTrack track, int level, int nextCost, float goldGainMultiplier, float healthRegenPerSecond)
+        public UpgradeViewData(
+            UpgradeTrack track,
+            int level,
+            int nextCost,
+            int attackPowerBonus,
+            int maxHealthBonus,
+            float attackSpeedBonus,
+            int flatDamageReduction,
+            float goldGainMultiplier,
+            float healthRegenPerSecond)
         {
             Track = track;
             Level = level;
             NextCost = nextCost;
+            AttackPowerBonus = attackPowerBonus;
+            MaxHealthBonus = maxHealthBonus;
+            AttackSpeedBonus = attackSpeedBonus;
+            FlatDamageReduction = flatDamageReduction;
             GoldGainMultiplier = goldGainMultiplier;
             HealthRegenPerSecond = healthRegenPerSecond;
         }
@@ -20,6 +33,14 @@ namespace IdleGame
         public int Level { get; }
 
         public int NextCost { get; }
+
+        public int AttackPowerBonus { get; }
+
+        public int MaxHealthBonus { get; }
+
+        public float AttackSpeedBonus { get; }
+
+        public int FlatDamageReduction { get; }
 
         public float GoldGainMultiplier { get; }
 
@@ -134,15 +155,7 @@ namespace IdleGame
         private int milestoneAttackPowerPerMilestone = 1;
 
         [SerializeField]
-        private List<UpgradeDefinition> upgrades = new()
-        {
-            new UpgradeDefinition(UpgradeTrack.AttackPower, 10, 1.28f, attackPowerPerLevel: 1),
-            new UpgradeDefinition(UpgradeTrack.MaxHealth, 14, 1.34f, maxHealthPerLevel: 10),
-            new UpgradeDefinition(UpgradeTrack.HealthRegen, 18, 1.40f, healthRegenPerSecondPerLevel: 0.6f),
-            new UpgradeDefinition(UpgradeTrack.Defense, 16, 1.38f, flatDamageReductionPerLevel: 1),
-            new UpgradeDefinition(UpgradeTrack.AttackSpeed, 20, 1.42f, attackSpeedPerLevel: 0.12f),
-            new UpgradeDefinition(UpgradeTrack.GoldGain, 24, 1.48f, goldGainMultiplierPerLevel: 0.12f),
-        };
+        private List<UpgradeDefinition> upgrades = BuildDefaultUpgradeDefinitions();
 
         private readonly Dictionary<UpgradeTrack, UpgradeState> upgradeStates = new();
         private AutoBattleSystem battleSystem;
@@ -346,11 +359,11 @@ namespace IdleGame
             return new List<UpgradeDefinition>
             {
                 new UpgradeDefinition(UpgradeTrack.AttackPower, 10, 1.28f, attackPowerPerLevel: 1),
-                new UpgradeDefinition(UpgradeTrack.MaxHealth, 14, 1.34f, maxHealthPerLevel: 10),
-                new UpgradeDefinition(UpgradeTrack.HealthRegen, 18, 1.40f, healthRegenPerSecondPerLevel: 0.6f),
-                new UpgradeDefinition(UpgradeTrack.Defense, 16, 1.38f, flatDamageReductionPerLevel: 1),
-                new UpgradeDefinition(UpgradeTrack.AttackSpeed, 20, 1.42f, attackSpeedPerLevel: 0.12f),
-                new UpgradeDefinition(UpgradeTrack.GoldGain, 24, 1.48f, goldGainMultiplierPerLevel: 0.12f),
+                new UpgradeDefinition(UpgradeTrack.MaxHealth, 14, 1.32f, maxHealthPerLevel: 12),
+                new UpgradeDefinition(UpgradeTrack.HealthRegen, 15, 1.34f, healthRegenPerSecondPerLevel: 1f),
+                new UpgradeDefinition(UpgradeTrack.Defense, 14, 1.46f, flatDamageReductionPerLevel: 1),
+                new UpgradeDefinition(UpgradeTrack.AttackSpeed, 16, 1.34f, attackSpeedPerLevel: 0.18f),
+                new UpgradeDefinition(UpgradeTrack.GoldGain, 18, 1.38f, goldGainMultiplierPerLevel: 0.18f),
             };
         }
 
@@ -431,6 +444,10 @@ namespace IdleGame
                     state.Definition.Track,
                     state.Level,
                     state.CurrentCost,
+                    state.Definition.GetAttackPowerBonus(state.Level),
+                    state.Definition.GetMaxHealthBonus(state.Level),
+                    state.Definition.GetAttackSpeedBonus(state.Level),
+                    state.Definition.GetFlatDamageReduction(state.Level),
                     state.Definition.GetGoldGainMultiplier(state.Level),
                     state.Definition.GetHealthRegenPerSecond(state.Level));
             }

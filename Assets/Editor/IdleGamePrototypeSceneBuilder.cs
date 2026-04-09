@@ -92,12 +92,12 @@ public static class IdleGamePrototypeSceneBuilder
         var upgradesPanel = EnsureChildRectTransform(uiRoot, UpgradesPanelName);
         ConfigureUpgradePanel(upgradesPanel);
 
-        var attackPowerButton = EnsureButton(upgradesPanel, AttackPowerButtonName, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 0f), "Attack Lv.0 (10g)");
-        var maxHealthButton = EnsureButton(upgradesPanel, MaxHealthButtonName, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, -74f), "Health Lv.0 (14g)");
-        var healthRegenButton = EnsureButton(upgradesPanel, HealthRegenButtonName, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, -148f), "Regen +0.0/s (18g)");
-        var defenseButton = EnsureButton(upgradesPanel, DefenseButtonName, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, -222f), "Defense Lv.0 (16g)");
-        var attackSpeedButton = EnsureButton(upgradesPanel, AttackSpeedButtonName, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, -296f), "Speed Lv.0 (20g)");
-        var goldGainButton = EnsureButton(upgradesPanel, GoldGainButtonName, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, -370f), "Bounty +0% (24g)");
+        var attackPowerButton = EnsureButton(upgradesPanel, AttackPowerButtonName, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 0f), "Attack +0 (10g)");
+        var maxHealthButton = EnsureButton(upgradesPanel, MaxHealthButtonName, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, -74f), "Health +0 (14g)");
+        var healthRegenButton = EnsureButton(upgradesPanel, HealthRegenButtonName, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, -148f), "Regen +0.0/s (15g)");
+        var defenseButton = EnsureButton(upgradesPanel, DefenseButtonName, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, -222f), "Defense -0 dmg (14g)");
+        var attackSpeedButton = EnsureButton(upgradesPanel, AttackSpeedButtonName, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, -296f), "Speed +0.00/s (16g)");
+        var goldGainButton = EnsureButton(upgradesPanel, GoldGainButtonName, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, -370f), "Bounty +0% (18g)");
 
         EnsureEventSystem(scene);
 

@@ -78,12 +78,9 @@ namespace IdleGame
         private float attackCooldown;
         private float pendingRegen;
 
-        public CombatantRuntime(CombatantStats stats)
+        public CombatantRuntime(CombatantStats stats, float openingAttackDelay = 0f)
         {
-            Stats = stats;
-            CurrentHealth = stats.MaxHealth;
-            attackCooldown = 0f;
-            pendingRegen = 0f;
+            Reset(stats, openingAttackDelay);
         }
 
         public CombatantStats Stats { get; private set; }
@@ -92,19 +89,19 @@ namespace IdleGame
 
         public bool IsAlive => CurrentHealth > 0;
 
-        public void Reset(CombatantStats stats)
+        public void Reset(CombatantStats stats, float openingAttackDelay = 0f)
         {
             Stats = stats;
             CurrentHealth = stats.MaxHealth;
-            attackCooldown = 0f;
+            attackCooldown = Mathf.Max(0f, openingAttackDelay);
             pendingRegen = 0f;
         }
 
-        public void SetStats(CombatantStats stats)
+        public void SetStats(CombatantStats stats, float openingAttackDelay = 0f)
         {
             Stats = stats;
             CurrentHealth = Mathf.Clamp(CurrentHealth, 0, stats.MaxHealth);
-            attackCooldown = 0f;
+            attackCooldown = Mathf.Max(0f, openingAttackDelay);
             pendingRegen = 0f;
         }
 

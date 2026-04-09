@@ -5,7 +5,7 @@ namespace IdleGame
 {
     public readonly struct EnemySpawnData
     {
-        public EnemySpawnData(int wave, string enemyId, CombatantStats stats, int goldReward, float respawnDelay, string behaviorLabel)
+        public EnemySpawnData(int wave, string enemyId, CombatantStats stats, int goldReward, float respawnDelay, string behaviorLabel, float openingAttackDelay = 0f)
         {
             Wave = Mathf.Max(1, wave);
             EnemyId = enemyId;
@@ -13,6 +13,7 @@ namespace IdleGame
             GoldReward = Mathf.Max(0, goldReward);
             RespawnDelay = Mathf.Max(0f, respawnDelay);
             BehaviorLabel = string.IsNullOrWhiteSpace(behaviorLabel) ? string.Empty : behaviorLabel.Trim();
+            OpeningAttackDelay = Mathf.Max(0f, openingAttackDelay);
         }
 
         public int Wave { get; }
@@ -26,6 +27,8 @@ namespace IdleGame
         public float RespawnDelay { get; }
 
         public string BehaviorLabel { get; }
+
+        public float OpeningAttackDelay { get; }
     }
 
     public readonly struct BattleSnapshot
@@ -108,7 +111,7 @@ namespace IdleGame
         {
             player = new CombatantRuntime(playerStats);
             enemySpawnData = initialEnemy;
-            enemy = new CombatantRuntime(initialEnemy.Stats);
+            enemy = new CombatantRuntime(initialEnemy.Stats, initialEnemy.OpeningAttackDelay);
             this.playerRespawnDelay = Mathf.Max(0f, playerRespawnDelay);
         }
 
@@ -142,7 +145,7 @@ namespace IdleGame
             queuedEnemySpawnData = default;
             hasQueuedEnemy = false;
             enemyRespawnRemaining = 0f;
-            enemy.Reset(spawnData.Stats);
+            enemy.Reset(spawnData.Stats, spawnData.OpeningAttackDelay);
             PublishState();
         }
 
@@ -174,7 +177,7 @@ namespace IdleGame
                     }
 
                     player.Reset(player.Stats);
-                    enemy.Reset(enemySpawnData.Stats);
+                    enemy.Reset(enemySpawnData.Stats, enemySpawnData.OpeningAttackDelay);
                     enemyRespawnRemaining = 0f;
                     changed = true;
                 }
@@ -191,7 +194,7 @@ namespace IdleGame
                         hasQueuedEnemy = false;
                     }
 
-                    enemy.Reset(enemySpawnData.Stats);
+                    enemy.Reset(enemySpawnData.Stats, enemySpawnData.OpeningAttackDelay);
                     changed = true;
                 }
             }
