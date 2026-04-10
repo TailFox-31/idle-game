@@ -149,10 +149,10 @@ namespace IdleGame
         private float guardActiveDuration = 3f;
 
         [SerializeField, Range(0.1f, 1f)]
-        private float guardDamageTakenMultiplier = 0.5f;
+        private float guardDamageTakenMultiplier = 0.68f;
 
         [SerializeField, Min(0f)]
-        private float guardRecoveryPercentPerSecond = 0.04f;
+        private float guardRecoveryPercentPerSecond = 0.02f;
 
         [Header("Milestone Rewards")]
         [SerializeField, Min(2)]
