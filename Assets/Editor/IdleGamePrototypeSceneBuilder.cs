@@ -24,6 +24,12 @@ public static class IdleGamePrototypeSceneBuilder
     private static readonly Vector2 TravelButtonPosition = new(184f, -64f);
     private static readonly Vector2 WaveTravelStepButtonSize = new(84f, 44f);
     private static readonly Vector2 WaveTravelButtonSize = new(176f, 44f);
+    private static readonly Vector2 RuntimeSkillPanelAnchor = new(0f, 0f);
+    private static readonly Vector2 RuntimeSkillPanelPivot = new(0f, 0f);
+    private static readonly Vector2 RuntimeSkillPanelPosition = new(380f, 20f);
+    private static readonly Vector2 RuntimeSkillPanelSize = new(220f, 72f);
+    private static readonly Vector2 RuntimeSkillButtonSize = new(200f, 52f);
+    private static readonly Vector2 GuardButtonPosition = new(0f, 0f);
 
     private const string MenuItemPath = "Tools/Idle Game/Build Or Refresh Prototype Scene Setup";
     private const string PrototypeCanvasName = "PrototypeCanvas";
@@ -45,6 +51,8 @@ public static class IdleGamePrototypeSceneBuilder
     private const string MaxHealthButtonName = "MaxHealthUpgradeButton";
     private const string HealthRegenButtonName = "HealthRegenUpgradeButton";
     private const string GoldGainButtonName = "GoldGainUpgradeButton";
+    private const string RuntimeSkillPanelName = "RuntimeSkillPanel";
+    private const string GuardButtonName = "GuardSkillButton";
     private const string ResetSaveButtonName = "ResetSaveButton";
     private const string LabelChildName = "Label";
     private const string GameManagerName = "GameManager";
@@ -102,6 +110,9 @@ public static class IdleGamePrototypeSceneBuilder
         var defenseButton = EnsureButton(upgradesPanel, DefenseButtonName, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, -222f), "Defense -0 dmg (14g)");
         var attackSpeedButton = EnsureButton(upgradesPanel, AttackSpeedButtonName, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, -296f), "Speed +0.00/s (16g)");
         var goldGainButton = EnsureButton(upgradesPanel, GoldGainButtonName, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, -370f), "Bounty +0% (18g)");
+        var skillPanel = EnsureChildRectTransform(upgradesPanel, RuntimeSkillPanelName);
+        ConfigureSkillPanel(skillPanel);
+        var guardButton = EnsureButton(skillPanel, GuardButtonName, new Vector2(0f, 1f), new Vector2(0f, 1f), GuardButtonPosition, "Guard\nReady", RuntimeSkillButtonSize, 20f);
 
         EnsureEventSystem(scene);
 
@@ -115,7 +126,7 @@ public static class IdleGamePrototypeSceneBuilder
         var uiBinder = EnsureComponent<UIBinder>(uiBinderObject);
 
         WireGameManager(gameManager, enemyController, uiBinder);
-        WireUiBinder(uiBinder, goldReadout, playerStatsReadout, enemyStatusReadout, startWaveReadout, previousWaveButton, nextWaveButton, travelButton, attackPowerButton, maxHealthButton, healthRegenButton, defenseButton, attackSpeedButton, goldGainButton, resetSaveButton);
+        WireUiBinder(uiBinder, goldReadout, playerStatsReadout, enemyStatusReadout, startWaveReadout, previousWaveButton, nextWaveButton, travelButton, attackPowerButton, maxHealthButton, healthRegenButton, defenseButton, attackSpeedButton, goldGainButton, resetSaveButton, guardButton);
 
         EditorSceneManager.MarkSceneDirty(scene);
         Selection.activeGameObject = systemsRoot;
@@ -207,7 +218,8 @@ public static class IdleGamePrototypeSceneBuilder
         Button defenseButton,
         Button attackSpeedButton,
         Button goldGainButton,
-        Button resetSaveButton)
+        Button resetSaveButton,
+        Button guardButton)
     {
         var serializedObject = new SerializedObject(uiBinder);
         SetObjectReference(serializedObject, "goldText", goldReadout);
@@ -231,6 +243,8 @@ public static class IdleGamePrototypeSceneBuilder
         SetObjectReference(serializedObject, "goldGainButton", goldGainButton);
         SetObjectReference(serializedObject, "goldGainButtonText", GetButtonLabel(goldGainButton));
         SetObjectReference(serializedObject, "resetSaveButton", resetSaveButton);
+        SetObjectReference(serializedObject, "guardButton", guardButton);
+        SetObjectReference(serializedObject, "guardButtonText", GetButtonLabel(guardButton));
         serializedObject.ApplyModifiedPropertiesWithoutUndo();
         EditorUtility.SetDirty(uiBinder);
     }
@@ -407,6 +421,15 @@ public static class IdleGamePrototypeSceneBuilder
         rectTransform.pivot = new Vector2(0f, 0f);
         rectTransform.anchoredPosition = new Vector2(20f, 20f);
         rectTransform.sizeDelta = new Vector2(340f, 448f);
+    }
+
+    private static void ConfigureSkillPanel(RectTransform rectTransform)
+    {
+        rectTransform.anchorMin = RuntimeSkillPanelAnchor;
+        rectTransform.anchorMax = RuntimeSkillPanelAnchor;
+        rectTransform.pivot = RuntimeSkillPanelPivot;
+        rectTransform.anchoredPosition = RuntimeSkillPanelPosition;
+        rectTransform.sizeDelta = RuntimeSkillPanelSize;
     }
 
     private static void StretchToParent(RectTransform rectTransform)

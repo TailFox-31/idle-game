@@ -27,6 +27,12 @@ namespace IdleGame
         private static readonly Vector2 RuntimeUpgradePanelPosition = new(20f, 20f);
         private static readonly Vector2 RuntimeUpgradePanelSize = new(340f, 448f);
         private static readonly Vector2 RuntimeUpgradeButtonSize = new(320f, 58f);
+        private static readonly Vector2 RuntimeSkillPanelAnchor = new(0f, 0f);
+        private static readonly Vector2 RuntimeSkillPanelPivot = new(0f, 0f);
+        private static readonly Vector2 RuntimeSkillPanelPosition = new(380f, 20f);
+        private static readonly Vector2 RuntimeSkillPanelSize = new(220f, 72f);
+        private static readonly Vector2 RuntimeSkillButtonSize = new(200f, 52f);
+        private static readonly Vector2 GuardButtonPosition = new(0f, 0f);
         private static readonly Vector2 AttackPowerUpgradeButtonPosition = new(0f, 0f);
         private static readonly Vector2 MaxHealthUpgradeButtonPosition = new(0f, -74f);
         private static readonly Vector2 HealthRegenUpgradeButtonPosition = new(0f, -148f);
@@ -85,6 +91,13 @@ namespace IdleGame
         [SerializeField]
         private Button resetSaveButton;
 
+        [Header("Player Skill")]
+        [SerializeField]
+        private Button guardButton;
+
+        [SerializeField]
+        private TMP_Text guardButtonText;
+
         [Header("Wave Travel")]
         [SerializeField]
         private TMP_Text startWaveText;
@@ -104,7 +117,9 @@ namespace IdleGame
         private bool ownsRuntimeResetButton;
         private bool ownsRuntimeWaveTravelControls;
         private bool ownsRuntimeUpgradeControls;
+        private bool ownsRuntimeSkillControls;
         private readonly List<GameObject> runtimeUpgradeObjects = new();
+        private readonly List<GameObject> runtimeSkillObjects = new();
         private GameManager gameManager;
         private static readonly Color32 TravelTargetHighlightColor = new(255, 214, 102, 255);
 
@@ -162,6 +177,11 @@ namespace IdleGame
             gameManager?.ResetSavedProgress();
         }
 
+        public void RequestActivateGuard()
+        {
+            gameManager?.TryActivateGuard();
+        }
+
         public void RequestPreviousStartWave()
         {
             gameManager?.SelectPreviousStartWave();
@@ -182,6 +202,7 @@ namespace IdleGame
             EnsureResetSaveButton();
             EnsureWaveTravelControls();
             EnsureUpgradeButtons();
+            EnsureGuardButton();
             ConfigureEnemyReadout();
             ConfigureWaveTravelLayout();
             RegisterButtons();
@@ -197,6 +218,7 @@ namespace IdleGame
             DestroyRuntimeResetButton();
             DestroyRuntimeWaveTravelControls();
             DestroyRuntimeUpgradeControls();
+            DestroyRuntimeSkillControls();
             Unbind();
         }
 
@@ -253,9 +275,15 @@ namespace IdleGame
             if (playerStatsText != null)
             {
                 var regenPerSecond = GetHealthRegenPerSecond(snapshot);
-                playerStatsText.text = snapshot.Battle.PlayerAlive
+                var playerReadout = snapshot.Battle.PlayerAlive
                     ? $"HP {snapshot.Battle.PlayerHealth}/{snapshot.Battle.PlayerMaxHealth} | ATK {snapshot.PlayerStats.AttackPower} | SPD {snapshot.PlayerStats.AttacksPerSecond:0.00} | DEF {snapshot.PlayerStats.FlatDamageReduction} | REG {regenPerSecond:0.0}/s | M+{snapshot.MilestoneAttackBonus}"
                     : $"HP 0/{snapshot.Battle.PlayerMaxHealth} | Down {snapshot.Battle.PlayerRespawnRemaining:0.0}s | ATK {snapshot.PlayerStats.AttackPower} | DEF {snapshot.PlayerStats.FlatDamageReduction} | REG {regenPerSecond:0.0}/s";
+                if (!string.IsNullOrWhiteSpace(snapshot.Battle.PlayerStateLabel))
+                {
+                    playerReadout = $"{playerReadout}\n<color=#8FD694>{snapshot.Battle.PlayerStateLabel}</color>";
+                }
+
+                playerStatsText.text = playerReadout;
             }
 
             if (enemyText != null)
@@ -275,6 +303,7 @@ namespace IdleGame
             RefreshUpgradeButton(snapshot, UpgradeTrack.Defense, defenseButton, defenseButtonText);
             RefreshUpgradeButton(snapshot, UpgradeTrack.AttackSpeed, attackSpeedButton, attackSpeedButtonText);
             RefreshUpgradeButton(snapshot, UpgradeTrack.GoldGain, goldGainButton, goldGainButtonText);
+            RefreshGuardButton(snapshot);
 
             if (previousWaveButton != null)
             {
@@ -327,6 +356,30 @@ namespace IdleGame
             }
         }
 
+        private void RefreshGuardButton(GameSnapshot snapshot)
+        {
+            var guardSkill = snapshot.Battle.GuardSkill;
+            if (guardButtonText != null)
+            {
+                guardButtonText.text = string.IsNullOrWhiteSpace(guardSkill.DisplayName)
+                    ? "Guard"
+                    : $"{guardSkill.DisplayName}\n{guardSkill.StatusText}";
+            }
+
+            if (guardButton != null)
+            {
+                guardButton.interactable = guardSkill.IsReady;
+                if (guardButton.targetGraphic is Graphic graphic)
+                {
+                    graphic.color = guardSkill.IsActive
+                        ? new Color32(76, 118, 82, 235)
+                        : guardSkill.IsReady
+                            ? new Color32(50, 72, 96, 220)
+                            : new Color32(74, 74, 74, 200);
+                }
+            }
+        }
+
         private void RegisterButtons()
         {
             if (attackPowerButton != null)
@@ -362,6 +415,11 @@ namespace IdleGame
             if (resetSaveButton != null)
             {
                 resetSaveButton.onClick.AddListener(RequestResetSave);
+            }
+
+            if (guardButton != null)
+            {
+                guardButton.onClick.AddListener(RequestActivateGuard);
             }
 
             if (previousWaveButton != null)
@@ -415,6 +473,11 @@ namespace IdleGame
             if (resetSaveButton != null)
             {
                 resetSaveButton.onClick.RemoveListener(RequestResetSave);
+            }
+
+            if (guardButton != null)
+            {
+                guardButton.onClick.RemoveListener(RequestActivateGuard);
             }
 
             if (previousWaveButton != null)
@@ -528,6 +591,31 @@ namespace IdleGame
             goldGainButtonText = GetButtonLabel(goldGainButton);
         }
 
+        private void EnsureGuardButton()
+        {
+            if (guardButtonText == null && guardButton != null)
+            {
+                guardButtonText = GetButtonLabel(guardButton);
+            }
+
+            if (guardButton != null)
+            {
+                return;
+            }
+
+            var parent = GetSkillParent();
+            if (parent == null)
+            {
+                return;
+            }
+
+            ConfigureSkillPanelRect(parent);
+            guardButton = CreateSkillButton(parent, "GuardSkillButton", GuardButtonPosition, "Guard\nReady");
+            guardButtonText = GetButtonLabel(guardButton);
+            runtimeSkillObjects.Add(guardButton.gameObject);
+            ownsRuntimeSkillControls = true;
+        }
+
         private void EnsureWaveTravelControls()
         {
             if (travelButtonText == null && travelButton != null)
@@ -623,6 +711,27 @@ namespace IdleGame
             goldGainButton = null;
             goldGainButtonText = null;
             ownsRuntimeUpgradeControls = false;
+        }
+
+        private void DestroyRuntimeSkillControls()
+        {
+            if (!ownsRuntimeSkillControls)
+            {
+                return;
+            }
+
+            for (var index = 0; index < runtimeSkillObjects.Count; index++)
+            {
+                if (runtimeSkillObjects[index] != null)
+                {
+                    Destroy(runtimeSkillObjects[index]);
+                }
+            }
+
+            runtimeSkillObjects.Clear();
+            guardButton = null;
+            guardButtonText = null;
+            ownsRuntimeSkillControls = false;
         }
 
         private static TMP_Text CreateTravelLabel(RectTransform parent, string name, string text)
@@ -839,6 +948,49 @@ namespace IdleGame
             return button;
         }
 
+        private static Button CreateSkillButton(RectTransform parent, string name, Vector2 anchoredPosition, string labelText)
+        {
+            var buttonObject = new GameObject(name, typeof(RectTransform), typeof(Image), typeof(Button));
+            buttonObject.transform.SetParent(parent, false);
+
+            var rectTransform = buttonObject.GetComponent<RectTransform>();
+            rectTransform.anchorMin = new Vector2(0f, 1f);
+            rectTransform.anchorMax = new Vector2(0f, 1f);
+            rectTransform.pivot = new Vector2(0f, 1f);
+            rectTransform.sizeDelta = RuntimeSkillButtonSize;
+            rectTransform.anchoredPosition = anchoredPosition;
+
+            var image = buttonObject.GetComponent<Image>();
+            image.color = new Color32(50, 72, 96, 220);
+
+            var button = buttonObject.GetComponent<Button>();
+            button.targetGraphic = image;
+
+            var labelObject = new GameObject("Label", typeof(RectTransform), typeof(TextMeshProUGUI));
+            labelObject.transform.SetParent(buttonObject.transform, false);
+
+            var labelRect = labelObject.GetComponent<RectTransform>();
+            labelRect.anchorMin = Vector2.zero;
+            labelRect.anchorMax = Vector2.one;
+            labelRect.offsetMin = new Vector2(12f, 6f);
+            labelRect.offsetMax = new Vector2(-12f, -6f);
+
+            var label = labelObject.GetComponent<TextMeshProUGUI>();
+            label.text = labelText;
+            label.fontSize = 20f;
+            label.alignment = TextAlignmentOptions.Center;
+            label.enableWordWrapping = false;
+            label.color = Color.white;
+            label.richText = false;
+
+            if (label.font == null && TMP_Settings.defaultFontAsset != null)
+            {
+                label.font = TMP_Settings.defaultFontAsset;
+            }
+
+            return button;
+        }
+
         private static void ConfigureUpgradePanelRect(RectTransform rectTransform)
         {
             if (rectTransform == null)
@@ -851,6 +1003,20 @@ namespace IdleGame
             rectTransform.pivot = RuntimeUpgradePanelPivot;
             rectTransform.anchoredPosition = RuntimeUpgradePanelPosition;
             rectTransform.sizeDelta = RuntimeUpgradePanelSize;
+        }
+
+        private static void ConfigureSkillPanelRect(RectTransform rectTransform)
+        {
+            if (rectTransform == null)
+            {
+                return;
+            }
+
+            rectTransform.anchorMin = RuntimeSkillPanelAnchor;
+            rectTransform.anchorMax = RuntimeSkillPanelAnchor;
+            rectTransform.pivot = RuntimeSkillPanelPivot;
+            rectTransform.anchoredPosition = RuntimeSkillPanelPosition;
+            rectTransform.sizeDelta = RuntimeSkillPanelSize;
         }
 
         private static TMP_Text GetButtonLabel(Button button)
@@ -1049,6 +1215,28 @@ namespace IdleGame
                 || defenseButton != null
                 || attackSpeedButton != null
                 || goldGainButton != null;
+        }
+
+        private RectTransform GetSkillParent()
+        {
+            if (guardButton != null && guardButton.transform.parent is RectTransform existingParent)
+            {
+                return existingParent;
+            }
+
+            var rootParent = GetUpgradeRootParent();
+            if (rootParent == null)
+            {
+                return null;
+            }
+
+            var panelObject = new GameObject("RuntimeSkillPanel", typeof(RectTransform));
+            panelObject.transform.SetParent(rootParent, false);
+            runtimeSkillObjects.Add(panelObject);
+
+            var panelRect = panelObject.GetComponent<RectTransform>();
+            ConfigureSkillPanelRect(panelRect);
+            return panelRect;
         }
 
         private Button EnsureUpgradeButton(RectTransform parent, Button existingButton, string name, Vector2 position, string labelText, ref bool ownsRuntimeControls)
