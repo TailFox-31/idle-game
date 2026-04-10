@@ -2,7 +2,7 @@ using UnityEngine;
 
 namespace IdleGame
 {
-    public enum BossMechanicType
+    public enum CombatMechanicType
     {
         None = 0,
         WindUpBurst = 1,
@@ -12,10 +12,17 @@ namespace IdleGame
         ReflectWindow = 5,
     }
 
-    public readonly struct BossMechanicDefinition
+    public enum CombatMechanicTriggerMode
     {
-        public BossMechanicDefinition(
-            BossMechanicType type,
+        AutomaticCycle = 0,
+        Manual = 1,
+        Threshold = 2,
+    }
+
+    public readonly struct CombatMechanicDefinition
+    {
+        public CombatMechanicDefinition(
+            CombatMechanicType type,
             string displayName,
             float cooldownDuration,
             float activeDuration,
@@ -25,7 +32,9 @@ namespace IdleGame
             float recoveryPercentPerSecond = 0f,
             float thresholdHealthRatio = 0f,
             float retaliationDamageMultiplier = 0f,
-            int retaliationFlatDamage = 0)
+            int retaliationFlatDamage = 0,
+            CombatMechanicTriggerMode triggerMode = CombatMechanicTriggerMode.AutomaticCycle,
+            bool blocksAttacksWhileActive = true)
         {
             Type = type;
             DisplayName = string.IsNullOrWhiteSpace(displayName) ? string.Empty : displayName.Trim();
@@ -38,9 +47,11 @@ namespace IdleGame
             ThresholdHealthRatio = Mathf.Clamp01(thresholdHealthRatio);
             RetaliationDamageMultiplier = Mathf.Max(0f, retaliationDamageMultiplier);
             RetaliationFlatDamage = Mathf.Max(0, retaliationFlatDamage);
+            TriggerMode = triggerMode;
+            BlocksAttacksWhileActive = blocksAttacksWhileActive;
         }
 
-        public BossMechanicType Type { get; }
+        public CombatMechanicType Type { get; }
 
         public string DisplayName { get; }
 
@@ -62,14 +73,18 @@ namespace IdleGame
 
         public int RetaliationFlatDamage { get; }
 
-        public bool IsDefined => Type != BossMechanicType.None;
+        public CombatMechanicTriggerMode TriggerMode { get; }
 
-        public static BossMechanicDefinition None => default;
+        public bool BlocksAttacksWhileActive { get; }
+
+        public bool IsDefined => Type != CombatMechanicType.None;
+
+        public static CombatMechanicDefinition None => default;
     }
 
-    public readonly struct BossHitReaction
+    public readonly struct CombatHitReaction
     {
-        public BossHitReaction(bool stateChanged, int retaliationDamage)
+        public CombatHitReaction(bool stateChanged, int retaliationDamage)
         {
             StateChanged = stateChanged;
             RetaliationDamage = Mathf.Max(0, retaliationDamage);
@@ -79,12 +94,12 @@ namespace IdleGame
 
         public int RetaliationDamage { get; }
 
-        public static BossHitReaction None => default;
+        public static CombatHitReaction None => default;
     }
 
-    public sealed class BossMechanicRuntime
+    public sealed class CombatMechanicRuntime
     {
-        private BossMechanicDefinition definition;
+        private CombatMechanicDefinition definition;
         private float timer;
         private float pendingRecovery;
         private int maxHealth;
@@ -106,11 +121,33 @@ namespace IdleGame
             Active = 1,
         }
 
-        public BossMechanicDefinition Definition => definition;
+        public CombatMechanicDefinition Definition => definition;
 
         public string StateText => BuildStateText();
 
-        public void Reset(BossMechanicDefinition newDefinition, int newMaxHealth)
+        public bool IsActive => definition.Type switch
+        {
+            CombatMechanicType.FrenzyWindow => IsWindowActive,
+            CombatMechanicType.GuardRecovery => IsWindowActive,
+            CombatMechanicType.ReflectWindow => IsWindowActive,
+            CombatMechanicType.WindUpBurst => burstState == WindUpBurstState.BurstReady,
+            CombatMechanicType.EnrageThreshold => enrageTriggered,
+            _ => false,
+        };
+
+        public bool CanTriggerManually => definition.IsDefined
+            && definition.TriggerMode == CombatMechanicTriggerMode.Manual
+            && SupportsTimedWindow()
+            && !IsWindowActive
+            && timer <= 0f;
+
+        public float CooldownRemaining => definition.TriggerMode == CombatMechanicTriggerMode.Manual && !IsWindowActive
+            ? Mathf.Max(0f, timer)
+            : 0f;
+
+        public float ActiveRemaining => IsWindowActive ? Mathf.Max(0f, timer) : 0f;
+
+        public void Reset(CombatMechanicDefinition newDefinition, int newMaxHealth)
         {
             definition = newDefinition;
             maxHealth = Mathf.Max(1, newMaxHealth);
@@ -122,20 +159,27 @@ namespace IdleGame
 
             switch (definition.Type)
             {
-                case BossMechanicType.WindUpBurst:
+                case CombatMechanicType.WindUpBurst:
                     burstState = WindUpBurstState.Charging;
                     timer = GetBurstChargeDuration();
                     break;
-                case BossMechanicType.FrenzyWindow:
-                case BossMechanicType.GuardRecovery:
-                case BossMechanicType.ReflectWindow:
-                    windowState = TimedWindowState.Cooldown;
-                    timer = GetCooldownDuration();
+                case CombatMechanicType.FrenzyWindow:
+                case CombatMechanicType.GuardRecovery:
+                case CombatMechanicType.ReflectWindow:
+                    if (definition.TriggerMode == CombatMechanicTriggerMode.Manual)
+                    {
+                        timer = 0f;
+                    }
+                    else
+                    {
+                        timer = GetCooldownDuration();
+                    }
+
                     break;
             }
         }
 
-        public bool Tick(float deltaTime, CombatantRuntime enemy)
+        public bool Tick(float deltaTime, CombatantRuntime actor)
         {
             if (!definition.IsDefined || deltaTime <= 0f)
             {
@@ -143,14 +187,14 @@ namespace IdleGame
             }
 
             var changed = false;
-            if (definition.Type == BossMechanicType.GuardRecovery && IsGuarding)
+            if (definition.Type == CombatMechanicType.GuardRecovery && IsGuarding)
             {
                 pendingRecovery += GetRecoveryPerSecond() * deltaTime;
                 var healAmount = Mathf.FloorToInt(pendingRecovery);
                 if (healAmount > 0)
                 {
                     pendingRecovery -= healAmount;
-                    changed |= enemy.RecoverHealth(healAmount);
+                    changed |= actor.RecoverHealth(healAmount);
                 }
             }
 
@@ -174,11 +218,11 @@ namespace IdleGame
 
             switch (definition.Type)
             {
-                case BossMechanicType.WindUpBurst:
+                case CombatMechanicType.WindUpBurst:
                     if (burstState == WindUpBurstState.Charging)
                     {
                         burstState = WindUpBurstState.BurstReady;
-                        enemy.SetAttackCooldown(0f);
+                        actor.SetAttackCooldown(0f);
                     }
                     else if (burstState == WindUpBurstState.Recovering)
                     {
@@ -187,26 +231,51 @@ namespace IdleGame
                     }
 
                     break;
-                case BossMechanicType.FrenzyWindow:
-                case BossMechanicType.GuardRecovery:
-                case BossMechanicType.ReflectWindow:
-                    windowState = windowState == TimedWindowState.Cooldown
-                        ? TimedWindowState.Active
-                        : TimedWindowState.Cooldown;
-                    timer = windowState == TimedWindowState.Active
-                        ? GetActiveDuration()
-                        : GetCooldownDuration();
+                case CombatMechanicType.FrenzyWindow:
+                case CombatMechanicType.GuardRecovery:
+                case CombatMechanicType.ReflectWindow:
+                    if (definition.TriggerMode == CombatMechanicTriggerMode.Manual)
+                    {
+                        if (windowState == TimedWindowState.Active)
+                        {
+                            windowState = TimedWindowState.Cooldown;
+                            timer = GetCooldownDuration();
+                        }
+                    }
+                    else
+                    {
+                        windowState = windowState == TimedWindowState.Cooldown
+                            ? TimedWindowState.Active
+                            : TimedWindowState.Cooldown;
+                        timer = windowState == TimedWindowState.Active
+                            ? GetActiveDuration()
+                            : GetCooldownDuration();
+                    }
+
                     break;
             }
 
             return true;
         }
 
+        public bool TryTrigger()
+        {
+            if (!CanTriggerManually)
+            {
+                return false;
+            }
+
+            windowState = TimedWindowState.Active;
+            timer = GetActiveDuration();
+            pendingRecovery = 0f;
+            return true;
+        }
+
         public bool CanAttack => definition.Type switch
         {
-            BossMechanicType.WindUpBurst => burstState == WindUpBurstState.BurstReady,
-            BossMechanicType.GuardRecovery => !IsGuarding,
-            BossMechanicType.ReflectWindow => !IsReflecting,
+            CombatMechanicType.WindUpBurst => burstState == WindUpBurstState.BurstReady,
+            CombatMechanicType.GuardRecovery when definition.BlocksAttacksWhileActive => !IsGuarding,
+            CombatMechanicType.ReflectWindow when definition.BlocksAttacksWhileActive => !IsReflecting,
             _ => true,
         };
 
@@ -214,8 +283,8 @@ namespace IdleGame
         {
             return definition.Type switch
             {
-                BossMechanicType.FrenzyWindow when IsWindowActive => Mathf.Max(0.1f, definition.AttackSpeedMultiplier),
-                BossMechanicType.EnrageThreshold when enrageTriggered => Mathf.Max(0.1f, definition.AttackSpeedMultiplier),
+                CombatMechanicType.FrenzyWindow when IsWindowActive => Mathf.Max(0.1f, definition.AttackSpeedMultiplier),
+                CombatMechanicType.EnrageThreshold when enrageTriggered => Mathf.Max(0.1f, definition.AttackSpeedMultiplier),
                 _ => 1f,
             };
         }
@@ -227,17 +296,17 @@ namespace IdleGame
                 return 0;
             }
 
-            if (definition.Type == BossMechanicType.WindUpBurst && burstState == WindUpBurstState.BurstReady)
+            if (definition.Type == CombatMechanicType.WindUpBurst && burstState == WindUpBurstState.BurstReady)
             {
                 return Mathf.Max(1, Mathf.RoundToInt(baseDamage * Mathf.Max(1f, definition.AttackPowerMultiplier)));
             }
 
-            if (definition.Type == BossMechanicType.FrenzyWindow && IsWindowActive)
+            if (definition.Type == CombatMechanicType.FrenzyWindow && IsWindowActive)
             {
                 return Mathf.Max(1, Mathf.RoundToInt(baseDamage * Mathf.Max(0.1f, definition.AttackPowerMultiplier)));
             }
 
-            if (definition.Type == BossMechanicType.EnrageThreshold && enrageTriggered)
+            if (definition.Type == CombatMechanicType.EnrageThreshold && enrageTriggered)
             {
                 return Mathf.Max(1, Mathf.RoundToInt(baseDamage * Mathf.Max(0.1f, definition.AttackPowerMultiplier)));
             }
@@ -252,17 +321,17 @@ namespace IdleGame
                 return 0;
             }
 
-            if (definition.Type == BossMechanicType.GuardRecovery && IsGuarding)
+            if (definition.Type == CombatMechanicType.GuardRecovery && IsGuarding)
             {
                 return Mathf.Max(1, Mathf.RoundToInt(baseDamage * definition.DamageTakenMultiplier));
             }
 
-            if (definition.Type == BossMechanicType.WindUpBurst && burstState == WindUpBurstState.Recovering)
+            if (definition.Type == CombatMechanicType.WindUpBurst && burstState == WindUpBurstState.Recovering)
             {
                 return Mathf.Max(1, Mathf.RoundToInt(baseDamage * definition.DamageTakenMultiplier));
             }
 
-            if (definition.Type == BossMechanicType.ReflectWindow && IsReflecting)
+            if (definition.Type == CombatMechanicType.ReflectWindow && IsReflecting)
             {
                 return Mathf.Max(1, Mathf.RoundToInt(baseDamage * definition.DamageTakenMultiplier));
             }
@@ -272,7 +341,7 @@ namespace IdleGame
 
         public bool NotifyAttackResolved()
         {
-            if (definition.Type != BossMechanicType.WindUpBurst || burstState != WindUpBurstState.BurstReady)
+            if (definition.Type != CombatMechanicType.WindUpBurst || burstState != WindUpBurstState.BurstReady)
             {
                 return false;
             }
@@ -282,48 +351,55 @@ namespace IdleGame
             return true;
         }
 
-        public BossHitReaction NotifyIncomingHitResolved(int appliedDamage, CombatantRuntime enemy, CombatantRuntime player)
+        public CombatHitReaction NotifyIncomingHitResolved(int appliedDamage, CombatantRuntime actor, CombatantRuntime opposingActor)
         {
             if (!definition.IsDefined)
             {
-                return BossHitReaction.None;
+                return CombatHitReaction.None;
             }
 
             var changed = false;
             var retaliationDamage = 0;
 
-            if (definition.Type == BossMechanicType.ReflectWindow && IsReflecting && appliedDamage > 0 && player != null)
+            if (definition.Type == CombatMechanicType.ReflectWindow && IsReflecting && appliedDamage > 0 && opposingActor != null)
             {
                 var retaliationAttempt = Mathf.Max(
                     0,
                     Mathf.RoundToInt((appliedDamage * definition.RetaliationDamageMultiplier) + definition.RetaliationFlatDamage));
                 retaliationDamage = retaliationAttempt > 0
-                    ? player.ReceiveDamage(retaliationAttempt)
+                    ? opposingActor.ReceiveDamage(retaliationAttempt)
                     : 0;
                 changed |= retaliationDamage > 0;
             }
 
-            if (definition.Type == BossMechanicType.EnrageThreshold
+            if (definition.Type == CombatMechanicType.EnrageThreshold
                 && !enrageTriggered
-                && enemy != null
-                && enemy.IsAlive
-                && enemy.CurrentHealth <= GetThresholdHealth())
+                && actor != null
+                && actor.IsAlive
+                && actor.CurrentHealth <= GetThresholdHealth())
             {
                 enrageTriggered = true;
-                enemy.SetAttackCooldown(0f);
+                actor.SetAttackCooldown(0f);
                 changed = true;
             }
 
             return changed || retaliationDamage > 0
-                ? new BossHitReaction(changed, retaliationDamage)
-                : BossHitReaction.None;
+                ? new CombatHitReaction(changed, retaliationDamage)
+                : CombatHitReaction.None;
+        }
+
+        private bool SupportsTimedWindow()
+        {
+            return definition.Type == CombatMechanicType.FrenzyWindow
+                || definition.Type == CombatMechanicType.GuardRecovery
+                || definition.Type == CombatMechanicType.ReflectWindow;
         }
 
         private bool IsWindowActive => windowState == TimedWindowState.Active;
 
-        private bool IsGuarding => definition.Type == BossMechanicType.GuardRecovery && IsWindowActive;
+        private bool IsGuarding => definition.Type == CombatMechanicType.GuardRecovery && IsWindowActive;
 
-        private bool IsReflecting => definition.Type == BossMechanicType.ReflectWindow && IsWindowActive;
+        private bool IsReflecting => definition.Type == CombatMechanicType.ReflectWindow && IsWindowActive;
 
         private float GetCooldownDuration()
         {
@@ -359,21 +435,21 @@ namespace IdleGame
 
             return definition.Type switch
             {
-                BossMechanicType.WindUpBurst => burstState == WindUpBurstState.BurstReady
+                CombatMechanicType.WindUpBurst => burstState == WindUpBurstState.BurstReady
                     ? $"{definition.DisplayName} ready"
                     : burstState == WindUpBurstState.Recovering
                         ? $"{definition.DisplayName} stagger {timer:0.0}s"
                         : $"{definition.DisplayName} {timer:0.0}s",
-                BossMechanicType.FrenzyWindow => IsWindowActive
+                CombatMechanicType.FrenzyWindow => IsWindowActive
                     ? $"{definition.DisplayName} {timer:0.0}s"
                     : string.Empty,
-                BossMechanicType.GuardRecovery => IsGuarding
+                CombatMechanicType.GuardRecovery => IsGuarding
                     ? $"{definition.DisplayName} +{GetRecoveryPerSecond():0}/s {timer:0.0}s"
                     : string.Empty,
-                BossMechanicType.EnrageThreshold => enrageTriggered
+                CombatMechanicType.EnrageThreshold => enrageTriggered
                     ? $"{definition.DisplayName} unleashed"
                     : $"{definition.DisplayName} at {definition.ThresholdHealthRatio * 100f:0}%",
-                BossMechanicType.ReflectWindow => IsReflecting
+                CombatMechanicType.ReflectWindow => IsReflecting
                     ? $"{definition.DisplayName} reflect {timer:0.0}s"
                     : string.Empty,
                 _ => string.Empty,
