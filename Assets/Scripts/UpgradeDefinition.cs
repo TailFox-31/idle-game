@@ -43,6 +43,12 @@ namespace IdleGame
         [SerializeField, Min(0f)]
         private float healthRegenPerSecondPerLevel = 0f;
 
+        [SerializeField, Min(0)]
+        private int fullEffectLevels = 0;
+
+        [SerializeField, Range(0f, 1f)]
+        private float postSoftCapEffectMultiplier = 1f;
+
         public UpgradeDefinition()
         {
         }
@@ -56,7 +62,9 @@ namespace IdleGame
             float attackSpeedPerLevel = 0f,
             int flatDamageReductionPerLevel = 0,
             float goldGainMultiplierPerLevel = 0f,
-            float healthRegenPerSecondPerLevel = 0f)
+            float healthRegenPerSecondPerLevel = 0f,
+            int fullEffectLevels = 0,
+            float postSoftCapEffectMultiplier = 1f)
         {
             this.track = track;
             this.startingCost = Mathf.Max(1, startingCost);
@@ -67,6 +75,8 @@ namespace IdleGame
             this.flatDamageReductionPerLevel = Mathf.Max(0, flatDamageReductionPerLevel);
             this.goldGainMultiplierPerLevel = Mathf.Max(0f, goldGainMultiplierPerLevel);
             this.healthRegenPerSecondPerLevel = Mathf.Max(0f, healthRegenPerSecondPerLevel);
+            this.fullEffectLevels = Mathf.Max(0, fullEffectLevels);
+            this.postSoftCapEffectMultiplier = Mathf.Clamp01(postSoftCapEffectMultiplier);
         }
 
         public UpgradeTrack Track => track;
@@ -99,7 +109,7 @@ namespace IdleGame
                 return 0f;
             }
 
-            return Mathf.Max(0f, healthRegenPerSecondPerLevel * level);
+            return Mathf.Max(0f, healthRegenPerSecondPerLevel * GetEffectiveLevel(level));
         }
 
         public int GetAttackPowerBonus(int level)
@@ -126,7 +136,7 @@ namespace IdleGame
         public int GetFlatDamageReduction(int level)
         {
             return track == UpgradeTrack.Defense
-                ? Mathf.Max(0, flatDamageReductionPerLevel * Mathf.Max(0, level))
+                ? Mathf.Max(0, Mathf.RoundToInt(flatDamageReductionPerLevel * GetEffectiveLevel(level)))
                 : 0;
         }
 
@@ -141,12 +151,23 @@ namespace IdleGame
             {
                 UpgradeTrack.AttackPower => stats.Add(attackPower: attackPowerPerLevel * level),
                 UpgradeTrack.MaxHealth => stats.Add(maxHealth: maxHealthPerLevel * level),
-                UpgradeTrack.Defense => stats.Add(flatDamageReduction: flatDamageReductionPerLevel * level),
+                UpgradeTrack.Defense => stats.Add(flatDamageReduction: GetFlatDamageReduction(level)),
                 UpgradeTrack.AttackSpeed => stats.Add(attacksPerSecond: attackSpeedPerLevel * level),
                 UpgradeTrack.GoldGain => stats,
-                UpgradeTrack.HealthRegen => stats.Add(healthRegenPerSecond: healthRegenPerSecondPerLevel * level),
+                UpgradeTrack.HealthRegen => stats.Add(healthRegenPerSecond: GetHealthRegenPerSecond(level)),
                 _ => stats,
             };
+        }
+
+        private float GetEffectiveLevel(int level)
+        {
+            var clampedLevel = Mathf.Max(0, level);
+            if (fullEffectLevels <= 0 || clampedLevel <= fullEffectLevels)
+            {
+                return clampedLevel;
+            }
+
+            return fullEffectLevels + ((clampedLevel - fullEffectLevels) * postSoftCapEffectMultiplier);
         }
     }
 

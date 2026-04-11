@@ -378,8 +378,20 @@ namespace IdleGame
             {
                 new UpgradeDefinition(UpgradeTrack.AttackPower, 10, 1.28f, attackPowerPerLevel: 1),
                 new UpgradeDefinition(UpgradeTrack.MaxHealth, 14, 1.32f, maxHealthPerLevel: 12),
-                new UpgradeDefinition(UpgradeTrack.HealthRegen, 15, 1.34f, healthRegenPerSecondPerLevel: 1f),
-                new UpgradeDefinition(UpgradeTrack.Defense, 14, 1.46f, flatDamageReductionPerLevel: 1),
+                new UpgradeDefinition(
+                    UpgradeTrack.HealthRegen,
+                    16,
+                    1.38f,
+                    healthRegenPerSecondPerLevel: 0.9f,
+                    fullEffectLevels: 8,
+                    postSoftCapEffectMultiplier: 0.65f),
+                new UpgradeDefinition(
+                    UpgradeTrack.Defense,
+                    15,
+                    1.50f,
+                    flatDamageReductionPerLevel: 1,
+                    fullEffectLevels: 8,
+                    postSoftCapEffectMultiplier: 0.6f),
                 new UpgradeDefinition(UpgradeTrack.AttackSpeed, 16, 1.34f, attackSpeedPerLevel: 0.18f),
                 new UpgradeDefinition(UpgradeTrack.GoldGain, 18, 1.38f, goldGainMultiplierPerLevel: 0.18f),
             };
