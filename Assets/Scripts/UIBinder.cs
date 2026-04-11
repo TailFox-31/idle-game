@@ -203,6 +203,7 @@ namespace IdleGame
             EnsureWaveTravelControls();
             EnsureUpgradeButtons();
             EnsureGuardButton();
+            ConfigurePlayerReadout();
             ConfigureEnemyReadout();
             ConfigureWaveTravelLayout();
             RegisterButtons();
@@ -811,6 +812,17 @@ namespace IdleGame
             rectTransform.anchoredPosition = Vector2.zero;
             rectTransform.offsetMin = new Vector2(0f, WaveTravelReadoutTopOffset.y);
             rectTransform.offsetMax = Vector2.zero;
+        }
+
+        private void ConfigurePlayerReadout()
+        {
+            if (playerStatsText == null)
+            {
+                return;
+            }
+
+            playerStatsText.richText = true;
+            playerStatsText.enableWordWrapping = false;
         }
 
         private void ConfigureEnemyReadout()

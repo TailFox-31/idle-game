@@ -86,6 +86,7 @@ public static class IdleGamePrototypeSceneBuilder
 
         var goldReadout = EnsureReadout(headerPanel, GoldReadoutName, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(20f, -20f), "G 0 | Loot +0% | W1 | N5");
         var playerStatsReadout = EnsureReadout(headerPanel, PlayerStatsReadoutName, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(20f, -66f), "ATK 0 | SPD 0.00 | DEF 0");
+        ConfigurePlayerReadout(playerStatsReadout);
         var enemyStatusReadout = EnsureReadout(headerPanel, EnemyStatusReadoutName, new Vector2(1f, 1f), new Vector2(1f, 1f), EnemyStatusReadoutPosition, "Enemy HP 0/0");
         ConfigureEnemyReadout(enemyStatusReadout);
         var resetSaveButton = EnsureButton(headerPanel, ResetSaveButtonName, new Vector2(1f, 1f), new Vector2(1f, 1f), ResetSaveButtonPosition, "Reset Save", ResetSaveButtonSize, 20f);
@@ -304,6 +305,17 @@ public static class IdleGamePrototypeSceneBuilder
         }
 
         return label;
+    }
+
+    private static void ConfigurePlayerReadout(TMP_Text readout)
+    {
+        if (readout == null)
+        {
+            return;
+        }
+
+        readout.richText = true;
+        readout.enableWordWrapping = false;
     }
 
     private static void ConfigureEnemyReadout(TMP_Text readout)
