@@ -393,10 +393,8 @@ namespace IdleGame
                 new UpgradeDefinition(
                     UpgradeTrack.Defense,
                     15,
-                    1.50f,
-                    flatDamageReductionPerLevel: 1,
-                    fullEffectLevels: 8,
-                    postSoftCapEffectMultiplier: 0.6f),
+                    1.60f,
+                    flatDamageReductionPerLevel: 1),
                 new UpgradeDefinition(UpgradeTrack.AttackSpeed, 16, 1.34f, attackSpeedPerLevel: 0.18f),
                 new UpgradeDefinition(UpgradeTrack.GoldGain, 18, 1.38f, goldGainMultiplierPerLevel: 0.18f),
             };
