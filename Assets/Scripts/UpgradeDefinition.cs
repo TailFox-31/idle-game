@@ -81,6 +81,24 @@ namespace IdleGame
 
         public UpgradeTrack Track => track;
 
+        public bool UsesLegacyDefaultBalanceValues()
+        {
+            return track switch
+            {
+                UpgradeTrack.Defense => startingCost == 14
+                    && Mathf.Approximately(costMultiplier, 1.46f)
+                    && flatDamageReductionPerLevel == 1
+                    && fullEffectLevels == 0
+                    && Mathf.Approximately(postSoftCapEffectMultiplier, 1f),
+                UpgradeTrack.HealthRegen => startingCost == 15
+                    && Mathf.Approximately(costMultiplier, 1.34f)
+                    && Mathf.Approximately(healthRegenPerSecondPerLevel, 1f)
+                    && fullEffectLevels == 0
+                    && Mathf.Approximately(postSoftCapEffectMultiplier, 1f),
+                _ => false,
+            };
+        }
+
         public int GetCost(int currentLevel)
         {
             var scaled = startingCost * Mathf.Pow(costMultiplier, Mathf.Max(0, currentLevel));

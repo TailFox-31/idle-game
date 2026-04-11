@@ -353,6 +353,11 @@ namespace IdleGame
                     continue;
                 }
 
+                if (candidate.UsesLegacyDefaultBalanceValues())
+                {
+                    continue;
+                }
+
                 normalized[normalizedIndex] = candidate;
             }
 
