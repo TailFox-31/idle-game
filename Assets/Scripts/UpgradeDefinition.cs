@@ -85,11 +85,7 @@ namespace IdleGame
         {
             return track switch
             {
-                UpgradeTrack.Defense => startingCost == 14
-                    && Mathf.Approximately(costMultiplier, 1.46f)
-                    && flatDamageReductionPerLevel == 1
-                    && fullEffectLevels == 0
-                    && Mathf.Approximately(postSoftCapEffectMultiplier, 1f),
+                UpgradeTrack.Defense => IsKnownDefaultDefenseBalance(),
                 UpgradeTrack.HealthRegen => startingCost == 15
                     && Mathf.Approximately(costMultiplier, 1.34f)
                     && Mathf.Approximately(healthRegenPerSecondPerLevel, 1f)
@@ -97,6 +93,23 @@ namespace IdleGame
                     && Mathf.Approximately(postSoftCapEffectMultiplier, 1f),
                 _ => false,
             };
+        }
+
+        private bool IsKnownDefaultDefenseBalance()
+        {
+            if (flatDamageReductionPerLevel != 1)
+            {
+                return false;
+            }
+
+            return (startingCost == 14
+                    && Mathf.Approximately(costMultiplier, 1.46f)
+                    && fullEffectLevels == 0
+                    && Mathf.Approximately(postSoftCapEffectMultiplier, 1f))
+                || (startingCost == 15
+                    && Mathf.Approximately(costMultiplier, 1.50f)
+                    && fullEffectLevels == 8
+                    && Mathf.Approximately(postSoftCapEffectMultiplier, 0.6f));
         }
 
         public int GetCost(int currentLevel)
