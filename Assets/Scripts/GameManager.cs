@@ -154,6 +154,18 @@ namespace IdleGame
         [SerializeField, Min(0f)]
         private float guardRecoveryPercentPerSecond = 0.02f;
 
+        [SerializeField, Range(0.01f, 1f)]
+        private float lastStandRestoreHealthRatio = 0.25f;
+
+        [SerializeField, Range(0.1f, 1f)]
+        private float lastStandDamageTakenMultiplier = 0.75f;
+
+        [SerializeField, Min(0.1f)]
+        private float lastStandActiveDuration = 4f;
+
+        [SerializeField, Min(0f)]
+        private float lastStandCooldownDuration = 60f;
+
         [Header("Milestone Rewards")]
         [SerializeField, Min(2)]
         private int milestoneWaveInterval = 5;
@@ -407,7 +419,12 @@ namespace IdleGame
                 return;
             }
 
-            battleSystem = new AutoBattleSystem(BuildPlayerStats(), enemyController.CreateSpawnDataForWave(currentWave), playerRespawnDelay, BuildGuardDefinition());
+            battleSystem = new AutoBattleSystem(
+                BuildPlayerStats(),
+                enemyController.CreateSpawnDataForWave(currentWave),
+                playerRespawnDelay,
+                BuildGuardDefinition(),
+                BuildLastStandDefinition());
             battleSystem.GoldAwarded += HandleGoldAwarded;
             battleSystem.EnemyDefeated += HandleEnemyDefeated;
             battleSystem.BattleStateChanged += _ => PublishState();
@@ -428,6 +445,7 @@ namespace IdleGame
 
             battleSystem.SetPlayerStats(BuildPlayerStats());
             battleSystem.SetPlayerGuardDefinition(BuildGuardDefinition());
+            battleSystem.SetPlayerLastStandDefinition(BuildLastStandDefinition());
             battleSystem.SetEnemy(enemyController.CreateSpawnDataForWave(currentWave));
         }
 
@@ -481,6 +499,19 @@ namespace IdleGame
                 blocksAttacksWhileActive: false);
         }
 
+        private CombatMechanicDefinition BuildLastStandDefinition()
+        {
+            return new CombatMechanicDefinition(
+                CombatMechanicType.LastStand,
+                "Last Stand AUTO",
+                lastStandCooldownDuration,
+                lastStandActiveDuration,
+                damageTakenMultiplier: lastStandDamageTakenMultiplier,
+                restoreHealthRatio: lastStandRestoreHealthRatio,
+                triggerMode: CombatMechanicTriggerMode.Manual,
+                blocksAttacksWhileActive: false);
+        }
+
         private GameSnapshot BuildSnapshot()
         {
             var upgradeData = new UpgradeViewData[upgradeStates.Count];
@@ -501,7 +532,7 @@ namespace IdleGame
 
             var battle = battleSystem != null
                 ? battleSystem.Snapshot
-                : new BattleSnapshot(0, string.Empty, 0, 0, false, 0f, string.Empty, default, 0, 0, 0, 0f, 0, string.Empty, string.Empty, false, 0f);
+                : new BattleSnapshot(0, string.Empty, 0, 0, false, 0f, string.Empty, default, default, 0, 0, 0, 0f, 0, string.Empty, string.Empty, false, 0f);
 
             return new GameSnapshot(
                 gold,
