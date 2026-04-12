@@ -30,9 +30,11 @@ namespace IdleGame
         private static readonly Vector2 RuntimeSkillPanelAnchor = new(0f, 0f);
         private static readonly Vector2 RuntimeSkillPanelPivot = new(0f, 0f);
         private static readonly Vector2 RuntimeSkillPanelPosition = new(380f, 20f);
-        private static readonly Vector2 RuntimeSkillPanelSize = new(220f, 72f);
+        private static readonly Vector2 RuntimeSkillPanelSize = new(464f, 72f);
         private static readonly Vector2 RuntimeSkillButtonSize = new(200f, 52f);
+        private static readonly Vector2 LastStandButtonSize = new(240f, 52f);
         private static readonly Vector2 GuardButtonPosition = new(0f, 0f);
+        private static readonly Vector2 LastStandButtonPosition = new(212f, 0f);
         private static readonly Vector2 AttackPowerUpgradeButtonPosition = new(0f, 0f);
         private static readonly Vector2 MaxHealthUpgradeButtonPosition = new(0f, -74f);
         private static readonly Vector2 HealthRegenUpgradeButtonPosition = new(0f, -148f);
@@ -97,6 +99,12 @@ namespace IdleGame
 
         [SerializeField]
         private TMP_Text guardButtonText;
+
+        [SerializeField]
+        private Button lastStandButton;
+
+        [SerializeField]
+        private TMP_Text lastStandButtonText;
 
         [Header("Wave Travel")]
         [SerializeField]
@@ -203,6 +211,7 @@ namespace IdleGame
             EnsureWaveTravelControls();
             EnsureUpgradeButtons();
             EnsureGuardButton();
+            EnsureLastStandButton();
             ConfigurePlayerReadout();
             ConfigureEnemyReadout();
             ConfigureWaveTravelLayout();
@@ -305,6 +314,7 @@ namespace IdleGame
             RefreshUpgradeButton(snapshot, UpgradeTrack.AttackSpeed, attackSpeedButton, attackSpeedButtonText);
             RefreshUpgradeButton(snapshot, UpgradeTrack.GoldGain, goldGainButton, goldGainButtonText);
             RefreshGuardButton(snapshot);
+            RefreshLastStandButton(snapshot);
 
             if (previousWaveButton != null)
             {
@@ -375,6 +385,30 @@ namespace IdleGame
                     graphic.color = guardSkill.IsActive
                         ? new Color32(76, 118, 82, 235)
                         : guardSkill.IsReady
+                            ? new Color32(50, 72, 96, 220)
+                            : new Color32(74, 74, 74, 200);
+                }
+            }
+        }
+
+        private void RefreshLastStandButton(GameSnapshot snapshot)
+        {
+            var lastStandSkill = snapshot.Battle.LastStandSkill;
+            if (lastStandButtonText != null)
+            {
+                lastStandButtonText.text = string.IsNullOrWhiteSpace(lastStandSkill.DisplayName)
+                    ? "Last Stand AUTO: Ready"
+                    : $"{lastStandSkill.DisplayName}: {lastStandSkill.StatusText}";
+            }
+
+            if (lastStandButton != null)
+            {
+                lastStandButton.interactable = false;
+                if (lastStandButton.targetGraphic is Graphic graphic)
+                {
+                    graphic.color = lastStandSkill.IsActive
+                        ? new Color32(76, 118, 82, 235)
+                        : lastStandSkill.IsReady
                             ? new Color32(50, 72, 96, 220)
                             : new Color32(74, 74, 74, 200);
                 }
@@ -617,6 +651,33 @@ namespace IdleGame
             ownsRuntimeSkillControls = true;
         }
 
+        private void EnsureLastStandButton()
+        {
+            if (lastStandButtonText == null && lastStandButton != null)
+            {
+                lastStandButtonText = GetButtonLabel(lastStandButton);
+            }
+
+            if (lastStandButton != null)
+            {
+                lastStandButton.interactable = false;
+                return;
+            }
+
+            var parent = GetSkillParent();
+            if (parent == null)
+            {
+                return;
+            }
+
+            ConfigureSkillPanelRect(parent);
+            lastStandButton = CreateSkillButton(parent, "LastStandSkillButton", LastStandButtonPosition, "Last Stand AUTO: Ready", LastStandButtonSize, 17f);
+            lastStandButton.interactable = false;
+            lastStandButtonText = GetButtonLabel(lastStandButton);
+            runtimeSkillObjects.Add(lastStandButton.gameObject);
+            ownsRuntimeSkillControls = true;
+        }
+
         private void EnsureWaveTravelControls()
         {
             if (travelButtonText == null && travelButton != null)
@@ -732,6 +793,8 @@ namespace IdleGame
             runtimeSkillObjects.Clear();
             guardButton = null;
             guardButtonText = null;
+            lastStandButton = null;
+            lastStandButtonText = null;
             ownsRuntimeSkillControls = false;
         }
 
@@ -962,6 +1025,11 @@ namespace IdleGame
 
         private static Button CreateSkillButton(RectTransform parent, string name, Vector2 anchoredPosition, string labelText)
         {
+            return CreateSkillButton(parent, name, anchoredPosition, labelText, RuntimeSkillButtonSize, 20f);
+        }
+
+        private static Button CreateSkillButton(RectTransform parent, string name, Vector2 anchoredPosition, string labelText, Vector2 sizeDelta, float fontSize)
+        {
             var buttonObject = new GameObject(name, typeof(RectTransform), typeof(Image), typeof(Button));
             buttonObject.transform.SetParent(parent, false);
 
@@ -969,7 +1037,7 @@ namespace IdleGame
             rectTransform.anchorMin = new Vector2(0f, 1f);
             rectTransform.anchorMax = new Vector2(0f, 1f);
             rectTransform.pivot = new Vector2(0f, 1f);
-            rectTransform.sizeDelta = RuntimeSkillButtonSize;
+            rectTransform.sizeDelta = sizeDelta;
             rectTransform.anchoredPosition = anchoredPosition;
 
             var image = buttonObject.GetComponent<Image>();
@@ -989,7 +1057,7 @@ namespace IdleGame
 
             var label = labelObject.GetComponent<TextMeshProUGUI>();
             label.text = labelText;
-            label.fontSize = 20f;
+            label.fontSize = fontSize;
             label.alignment = TextAlignmentOptions.Center;
             label.enableWordWrapping = false;
             label.color = Color.white;
@@ -1234,6 +1302,11 @@ namespace IdleGame
             if (guardButton != null && guardButton.transform.parent is RectTransform existingParent)
             {
                 return existingParent;
+            }
+
+            if (lastStandButton != null && lastStandButton.transform.parent is RectTransform lastStandParent)
+            {
+                return lastStandParent;
             }
 
             var rootParent = GetUpgradeRootParent();

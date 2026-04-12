@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 
 namespace IdleGame
@@ -10,6 +11,7 @@ namespace IdleGame
         GuardRecovery = 3,
         EnrageThreshold = 4,
         ReflectWindow = 5,
+        LastStand = 6,
     }
 
     public enum CombatMechanicTriggerMode
@@ -33,6 +35,7 @@ namespace IdleGame
             float thresholdHealthRatio = 0f,
             float retaliationDamageMultiplier = 0f,
             int retaliationFlatDamage = 0,
+            float restoreHealthRatio = 0f,
             CombatMechanicTriggerMode triggerMode = CombatMechanicTriggerMode.AutomaticCycle,
             bool blocksAttacksWhileActive = true)
         {
@@ -47,6 +50,7 @@ namespace IdleGame
             ThresholdHealthRatio = Mathf.Clamp01(thresholdHealthRatio);
             RetaliationDamageMultiplier = Mathf.Max(0f, retaliationDamageMultiplier);
             RetaliationFlatDamage = Mathf.Max(0, retaliationFlatDamage);
+            RestoreHealthRatio = Mathf.Clamp01(restoreHealthRatio);
             TriggerMode = triggerMode;
             BlocksAttacksWhileActive = blocksAttacksWhileActive;
         }
@@ -72,6 +76,8 @@ namespace IdleGame
         public float RetaliationDamageMultiplier { get; }
 
         public int RetaliationFlatDamage { get; }
+
+        public float RestoreHealthRatio { get; }
 
         public CombatMechanicTriggerMode TriggerMode { get; }
 
@@ -130,6 +136,7 @@ namespace IdleGame
             CombatMechanicType.FrenzyWindow => IsWindowActive,
             CombatMechanicType.GuardRecovery => IsWindowActive,
             CombatMechanicType.ReflectWindow => IsWindowActive,
+            CombatMechanicType.LastStand => IsWindowActive,
             CombatMechanicType.WindUpBurst => burstState == WindUpBurstState.BurstReady,
             CombatMechanicType.EnrageThreshold => enrageTriggered,
             _ => false,
@@ -137,7 +144,12 @@ namespace IdleGame
 
         public bool CanTriggerManually => definition.IsDefined
             && definition.TriggerMode == CombatMechanicTriggerMode.Manual
+            && definition.Type != CombatMechanicType.LastStand
             && SupportsTimedWindow()
+            && !IsWindowActive
+            && timer <= 0f;
+
+        public bool CanTriggerLastStand => definition.Type == CombatMechanicType.LastStand
             && !IsWindowActive
             && timer <= 0f;
 
@@ -166,6 +178,7 @@ namespace IdleGame
                 case CombatMechanicType.FrenzyWindow:
                 case CombatMechanicType.GuardRecovery:
                 case CombatMechanicType.ReflectWindow:
+                case CombatMechanicType.LastStand:
                     if (definition.TriggerMode == CombatMechanicTriggerMode.Manual)
                     {
                         timer = 0f;
@@ -234,6 +247,7 @@ namespace IdleGame
                 case CombatMechanicType.FrenzyWindow:
                 case CombatMechanicType.GuardRecovery:
                 case CombatMechanicType.ReflectWindow:
+                case CombatMechanicType.LastStand:
                     if (definition.TriggerMode == CombatMechanicTriggerMode.Manual)
                     {
                         if (windowState == TimedWindowState.Active)
@@ -265,6 +279,23 @@ namespace IdleGame
                 return false;
             }
 
+            windowState = TimedWindowState.Active;
+            timer = GetActiveDuration();
+            pendingRecovery = 0f;
+            return true;
+        }
+
+        public bool TryTriggerLastStand(CombatantRuntime actor)
+        {
+            if (definition.Type != CombatMechanicType.LastStand
+                || actor == null
+                || IsWindowActive
+                || timer > 0f)
+            {
+                return false;
+            }
+
+            actor.SetCurrentHealth(Mathf.Max(1, Mathf.CeilToInt(actor.Stats.MaxHealth * definition.RestoreHealthRatio)));
             windowState = TimedWindowState.Active;
             timer = GetActiveDuration();
             pendingRecovery = 0f;
@@ -336,6 +367,11 @@ namespace IdleGame
                 return Mathf.Max(1, Mathf.RoundToInt(baseDamage * definition.DamageTakenMultiplier));
             }
 
+            if (definition.Type == CombatMechanicType.LastStand && IsWindowActive)
+            {
+                return Mathf.Max(1, Mathf.RoundToInt(baseDamage * definition.DamageTakenMultiplier));
+            }
+
             return baseDamage;
         }
 
@@ -351,7 +387,7 @@ namespace IdleGame
             return true;
         }
 
-        public CombatHitReaction NotifyIncomingHitResolved(int appliedDamage, CombatantRuntime actor, CombatantRuntime opposingActor)
+        public CombatHitReaction NotifyIncomingHitResolved(int appliedDamage, CombatantRuntime actor, CombatantRuntime opposingActor, Func<int, int> applyRetaliationDamage = null)
         {
             if (!definition.IsDefined)
             {
@@ -367,7 +403,9 @@ namespace IdleGame
                     0,
                     Mathf.RoundToInt((appliedDamage * definition.RetaliationDamageMultiplier) + definition.RetaliationFlatDamage));
                 retaliationDamage = retaliationAttempt > 0
-                    ? opposingActor.ReceiveDamage(retaliationAttempt)
+                    ? (applyRetaliationDamage != null
+                        ? applyRetaliationDamage(retaliationAttempt)
+                        : opposingActor.ReceiveDamage(retaliationAttempt))
                     : 0;
                 changed |= retaliationDamage > 0;
             }
@@ -392,7 +430,8 @@ namespace IdleGame
         {
             return definition.Type == CombatMechanicType.FrenzyWindow
                 || definition.Type == CombatMechanicType.GuardRecovery
-                || definition.Type == CombatMechanicType.ReflectWindow;
+                || definition.Type == CombatMechanicType.ReflectWindow
+                || definition.Type == CombatMechanicType.LastStand;
         }
 
         private bool IsWindowActive => windowState == TimedWindowState.Active;
@@ -451,6 +490,9 @@ namespace IdleGame
                     : $"{definition.DisplayName} at {definition.ThresholdHealthRatio * 100f:0}%",
                 CombatMechanicType.ReflectWindow => IsReflecting
                     ? $"{definition.DisplayName} reflect {timer:0.0}s"
+                    : string.Empty,
+                CombatMechanicType.LastStand => IsWindowActive
+                    ? $"{definition.DisplayName} protection {timer:0.0}s"
                     : string.Empty,
                 _ => string.Empty,
             };
