@@ -192,6 +192,11 @@ namespace IdleGame
             }
         }
 
+        public void SetMaxHealth(int newMaxHealth)
+        {
+            maxHealth = Mathf.Max(1, newMaxHealth);
+        }
+
         public bool Tick(float deltaTime, CombatantRuntime actor)
         {
             if (!definition.IsDefined || deltaTime <= 0f)

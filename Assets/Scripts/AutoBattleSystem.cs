@@ -194,21 +194,21 @@ namespace IdleGame
                 player.SetStats(playerStats);
             }
 
-            ResetPlayerRuntimeState();
+            RefreshPlayerMechanicMaxHealth();
             PublishState();
         }
 
         public void SetPlayerGuardDefinition(CombatMechanicDefinition definition)
         {
             playerGuardDefinition = definition;
-            ResetPlayerRuntimeState();
+            ResetPlayerGuardRuntimeState();
             PublishState();
         }
 
         public void SetPlayerLastStandDefinition(CombatMechanicDefinition definition)
         {
             playerLastStandDefinition = definition;
-            ResetPlayerRuntimeState();
+            ResetPlayerLastStandRuntimeState();
             PublishState();
         }
 
@@ -385,8 +385,24 @@ namespace IdleGame
 
         private void ResetPlayerRuntimeState()
         {
+            ResetPlayerGuardRuntimeState();
+            ResetPlayerLastStandRuntimeState();
+        }
+
+        private void ResetPlayerGuardRuntimeState()
+        {
             playerGuardMechanic.Reset(playerGuardDefinition, player.Stats.MaxHealth);
+        }
+
+        private void ResetPlayerLastStandRuntimeState()
+        {
             playerLastStandMechanic.Reset(playerLastStandDefinition, player.Stats.MaxHealth);
+        }
+
+        private void RefreshPlayerMechanicMaxHealth()
+        {
+            playerGuardMechanic.SetMaxHealth(player.Stats.MaxHealth);
+            playerLastStandMechanic.SetMaxHealth(player.Stats.MaxHealth);
         }
 
         private SkillSnapshot BuildGuardSnapshot()
