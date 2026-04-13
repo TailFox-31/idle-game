@@ -72,6 +72,7 @@ namespace IdleGame
             SkillSnapshot guardSkill,
             SkillSnapshot lastStandSkill,
             SkillSnapshot burstSkill,
+            SkillSnapshot frenzySkill,
             int enemyHealth,
             int enemyMaxHealth,
             int enemyAttackPower,
@@ -92,6 +93,7 @@ namespace IdleGame
             GuardSkill = guardSkill;
             LastStandSkill = lastStandSkill;
             BurstSkill = burstSkill;
+            FrenzySkill = frenzySkill;
             EnemyHealth = enemyHealth;
             EnemyMaxHealth = enemyMaxHealth;
             EnemyAttackPower = enemyAttackPower;
@@ -125,6 +127,8 @@ namespace IdleGame
 
         public SkillSnapshot BurstSkill { get; }
 
+        public SkillSnapshot FrenzySkill { get; }
+
         public int EnemyHealth { get; }
 
         public int EnemyMaxHealth { get; }
@@ -146,16 +150,20 @@ namespace IdleGame
 
     public sealed class AutoBattleSystem
     {
+        private const float MinimumPlayerAttackInterval = 0.25f;
+
         private readonly CombatantRuntime player;
         private readonly CombatantRuntime enemy;
         private readonly CombatMechanicRuntime enemyCombatMechanic = new();
         private readonly CombatMechanicRuntime playerGuardMechanic = new();
         private readonly CombatMechanicRuntime playerLastStandMechanic = new();
         private readonly CombatMechanicRuntime playerBurstMechanic = new();
+        private readonly CombatMechanicRuntime playerFrenzyMechanic = new();
         private readonly float playerRespawnDelay;
         private CombatMechanicDefinition playerGuardDefinition;
         private CombatMechanicDefinition playerLastStandDefinition;
         private CombatMechanicDefinition playerBurstDefinition;
+        private CombatMechanicDefinition playerFrenzyDefinition;
         private EnemySpawnData enemySpawnData;
         private EnemySpawnData queuedEnemySpawnData;
         private float enemyRespawnRemaining;
@@ -168,7 +176,8 @@ namespace IdleGame
             float playerRespawnDelay,
             CombatMechanicDefinition playerGuardDefinition,
             CombatMechanicDefinition playerLastStandDefinition,
-            CombatMechanicDefinition playerBurstDefinition)
+            CombatMechanicDefinition playerBurstDefinition,
+            CombatMechanicDefinition playerFrenzyDefinition)
         {
             player = new CombatantRuntime(playerStats);
             enemySpawnData = initialEnemy;
@@ -178,6 +187,7 @@ namespace IdleGame
             this.playerGuardDefinition = playerGuardDefinition;
             this.playerLastStandDefinition = playerLastStandDefinition;
             this.playerBurstDefinition = playerBurstDefinition;
+            this.playerFrenzyDefinition = playerFrenzyDefinition;
             ResetPlayerRuntimeState();
         }
 
@@ -227,6 +237,13 @@ namespace IdleGame
             PublishState();
         }
 
+        public void SetPlayerFrenzyDefinition(CombatMechanicDefinition definition)
+        {
+            playerFrenzyDefinition = definition;
+            ResetPlayerFrenzyRuntimeState();
+            PublishState();
+        }
+
         public bool TryActivateGuard()
         {
             if (!player.IsAlive || !enemy.IsAlive)
@@ -251,6 +268,22 @@ namespace IdleGame
             }
 
             var activated = playerBurstMechanic.TryTrigger();
+            if (activated)
+            {
+                PublishState();
+            }
+
+            return activated;
+        }
+
+        public bool TryActivateFrenzy()
+        {
+            if (!player.IsAlive || !enemy.IsAlive)
+            {
+                return false;
+            }
+
+            var activated = playerFrenzyMechanic.TryTrigger();
             if (activated)
             {
                 PublishState();
@@ -330,9 +363,10 @@ namespace IdleGame
                 changed |= playerGuardMechanic.Tick(deltaTime, player);
                 changed |= playerLastStandMechanic.Tick(deltaTime, player);
                 changed |= playerBurstMechanic.Tick(deltaTime, player);
+                changed |= playerFrenzyMechanic.Tick(deltaTime, player);
                 changed |= enemyCombatMechanic.Tick(deltaTime, enemy);
 
-                var playerAttacks = player.TryAttack(deltaTime);
+                var playerAttacks = player.TryAttack(deltaTime, playerFrenzyMechanic.GetAttackSpeedMultiplier(), MinimumPlayerAttackInterval);
                 var enemyAttacks = enemyCombatMechanic.CanAttack && enemy.TryAttack(deltaTime, enemyCombatMechanic.GetAttackSpeedMultiplier());
                 if (!playerAttacks && !enemyAttacks)
                 {
@@ -407,6 +441,7 @@ namespace IdleGame
                 BuildGuardSnapshot(),
                 BuildLastStandSnapshot(),
                 BuildBurstSnapshot(),
+                BuildFrenzySnapshot(),
                 enemy.CurrentHealth,
                 displayedEnemy.Stats.MaxHealth,
                 displayedEnemy.Stats.AttackPower,
@@ -423,6 +458,7 @@ namespace IdleGame
             ResetPlayerGuardRuntimeState();
             ResetPlayerLastStandRuntimeState();
             ResetPlayerBurstRuntimeState();
+            ResetPlayerFrenzyRuntimeState();
         }
 
         private void ResetPlayerGuardRuntimeState()
@@ -440,11 +476,17 @@ namespace IdleGame
             playerBurstMechanic.Reset(playerBurstDefinition, player.Stats.MaxHealth);
         }
 
+        private void ResetPlayerFrenzyRuntimeState()
+        {
+            playerFrenzyMechanic.Reset(playerFrenzyDefinition, player.Stats.MaxHealth);
+        }
+
         private void RefreshPlayerMechanicMaxHealth()
         {
             playerGuardMechanic.SetMaxHealth(player.Stats.MaxHealth);
             playerLastStandMechanic.SetMaxHealth(player.Stats.MaxHealth);
             playerBurstMechanic.SetMaxHealth(player.Stats.MaxHealth);
+            playerFrenzyMechanic.SetMaxHealth(player.Stats.MaxHealth);
         }
 
         private SkillSnapshot BuildGuardSnapshot()
@@ -534,6 +576,35 @@ namespace IdleGame
                 statusText);
         }
 
+        private SkillSnapshot BuildFrenzySnapshot()
+        {
+            if (!playerFrenzyDefinition.IsDefined)
+            {
+                return default;
+            }
+
+            var isActive = player.IsAlive && enemy.IsAlive && playerFrenzyMechanic.IsActive;
+            var cooldownRemaining = player.IsAlive ? playerFrenzyMechanic.CooldownRemaining : 0f;
+            var isReady = player.IsAlive && enemy.IsAlive && playerFrenzyMechanic.CanTriggerManually;
+            var statusText = !player.IsAlive
+                ? "Down"
+                : !enemy.IsAlive
+                    ? "Waiting"
+                    : isActive
+                        ? $"Active {playerFrenzyMechanic.ActiveRemaining:0.0}s"
+                        : cooldownRemaining > 0f
+                            ? $"Cooldown {cooldownRemaining:0.0}s"
+                            : "Ready";
+
+            return new SkillSnapshot(
+                playerFrenzyDefinition.DisplayName,
+                isReady,
+                isActive,
+                cooldownRemaining,
+                playerFrenzyMechanic.ActiveRemaining,
+                statusText);
+        }
+
         private string BuildPlayerStateLabel()
         {
             if (!player.IsAlive)
@@ -544,6 +615,7 @@ namespace IdleGame
             var guardState = playerGuardMechanic.StateText;
             var lastStandState = playerLastStandMechanic.StateText;
             var burstState = playerBurstMechanic.StateText;
+            var frenzyState = playerFrenzyMechanic.StateText;
             var stateLabel = string.Empty;
 
             if (!string.IsNullOrWhiteSpace(guardState))
@@ -563,6 +635,13 @@ namespace IdleGame
                 stateLabel = string.IsNullOrWhiteSpace(stateLabel)
                     ? burstState
                     : $"{stateLabel} | {burstState}";
+            }
+
+            if (!string.IsNullOrWhiteSpace(frenzyState))
+            {
+                stateLabel = string.IsNullOrWhiteSpace(stateLabel)
+                    ? frenzyState
+                    : $"{stateLabel} | {frenzyState}";
             }
 
             return stateLabel;
