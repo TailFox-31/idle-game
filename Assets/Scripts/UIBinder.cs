@@ -30,11 +30,12 @@ namespace IdleGame
         private static readonly Vector2 RuntimeSkillPanelAnchor = new(0f, 0f);
         private static readonly Vector2 RuntimeSkillPanelPivot = new(0f, 0f);
         private static readonly Vector2 RuntimeSkillPanelPosition = new(380f, 20f);
-        private static readonly Vector2 RuntimeSkillPanelSize = new(464f, 72f);
+        private static readonly Vector2 RuntimeSkillPanelSize = new(676f, 72f);
         private static readonly Vector2 RuntimeSkillButtonSize = new(200f, 52f);
         private static readonly Vector2 LastStandButtonSize = new(240f, 52f);
         private static readonly Vector2 GuardButtonPosition = new(0f, 0f);
         private static readonly Vector2 LastStandButtonPosition = new(212f, 0f);
+        private static readonly Vector2 BurstButtonPosition = new(464f, 0f);
         private static readonly Vector2 AttackPowerUpgradeButtonPosition = new(0f, 0f);
         private static readonly Vector2 MaxHealthUpgradeButtonPosition = new(0f, -74f);
         private static readonly Vector2 HealthRegenUpgradeButtonPosition = new(0f, -148f);
@@ -105,6 +106,12 @@ namespace IdleGame
 
         [SerializeField]
         private TMP_Text lastStandButtonText;
+
+        [SerializeField]
+        private Button burstButton;
+
+        [SerializeField]
+        private TMP_Text burstButtonText;
 
         [Header("Wave Travel")]
         [SerializeField]
@@ -190,6 +197,11 @@ namespace IdleGame
             gameManager?.TryActivateGuard();
         }
 
+        public void RequestActivateBurst()
+        {
+            gameManager?.TryActivateBurst();
+        }
+
         public void RequestPreviousStartWave()
         {
             gameManager?.SelectPreviousStartWave();
@@ -212,6 +224,7 @@ namespace IdleGame
             EnsureUpgradeButtons();
             EnsureGuardButton();
             EnsureLastStandButton();
+            EnsureBurstButton();
             ConfigurePlayerReadout();
             ConfigureEnemyReadout();
             ConfigureWaveTravelLayout();
@@ -315,6 +328,7 @@ namespace IdleGame
             RefreshUpgradeButton(snapshot, UpgradeTrack.GoldGain, goldGainButton, goldGainButtonText);
             RefreshGuardButton(snapshot);
             RefreshLastStandButton(snapshot);
+            RefreshBurstButton(snapshot);
 
             if (previousWaveButton != null)
             {
@@ -415,6 +429,30 @@ namespace IdleGame
             }
         }
 
+        private void RefreshBurstButton(GameSnapshot snapshot)
+        {
+            var burstSkill = snapshot.Battle.BurstSkill;
+            if (burstButtonText != null)
+            {
+                burstButtonText.text = string.IsNullOrWhiteSpace(burstSkill.DisplayName)
+                    ? "Burst"
+                    : $"{burstSkill.DisplayName}\n{burstSkill.StatusText}";
+            }
+
+            if (burstButton != null)
+            {
+                burstButton.interactable = burstSkill.IsReady;
+                if (burstButton.targetGraphic is Graphic graphic)
+                {
+                    graphic.color = burstSkill.IsActive
+                        ? new Color32(118, 88, 50, 235)
+                        : burstSkill.IsReady
+                            ? new Color32(50, 72, 96, 220)
+                            : new Color32(74, 74, 74, 200);
+                }
+            }
+        }
+
         private void RegisterButtons()
         {
             if (attackPowerButton != null)
@@ -455,6 +493,11 @@ namespace IdleGame
             if (guardButton != null)
             {
                 guardButton.onClick.AddListener(RequestActivateGuard);
+            }
+
+            if (burstButton != null)
+            {
+                burstButton.onClick.AddListener(RequestActivateBurst);
             }
 
             if (previousWaveButton != null)
@@ -513,6 +556,11 @@ namespace IdleGame
             if (guardButton != null)
             {
                 guardButton.onClick.RemoveListener(RequestActivateGuard);
+            }
+
+            if (burstButton != null)
+            {
+                burstButton.onClick.RemoveListener(RequestActivateBurst);
             }
 
             if (previousWaveButton != null)
@@ -678,6 +726,31 @@ namespace IdleGame
             ownsRuntimeSkillControls = true;
         }
 
+        private void EnsureBurstButton()
+        {
+            if (burstButtonText == null && burstButton != null)
+            {
+                burstButtonText = GetButtonLabel(burstButton);
+            }
+
+            if (burstButton != null)
+            {
+                return;
+            }
+
+            var parent = GetSkillParent();
+            if (parent == null)
+            {
+                return;
+            }
+
+            ConfigureSkillPanelRect(parent);
+            burstButton = CreateSkillButton(parent, "BurstSkillButton", BurstButtonPosition, "Burst\nReady");
+            burstButtonText = GetButtonLabel(burstButton);
+            runtimeSkillObjects.Add(burstButton.gameObject);
+            ownsRuntimeSkillControls = true;
+        }
+
         private void EnsureWaveTravelControls()
         {
             if (travelButtonText == null && travelButton != null)
@@ -795,6 +868,8 @@ namespace IdleGame
             guardButtonText = null;
             lastStandButton = null;
             lastStandButtonText = null;
+            burstButton = null;
+            burstButtonText = null;
             ownsRuntimeSkillControls = false;
         }
 
@@ -1307,6 +1382,11 @@ namespace IdleGame
             if (lastStandButton != null && lastStandButton.transform.parent is RectTransform lastStandParent)
             {
                 return lastStandParent;
+            }
+
+            if (burstButton != null && burstButton.transform.parent is RectTransform burstParent)
+            {
+                return burstParent;
             }
 
             var rootParent = GetUpgradeRootParent();

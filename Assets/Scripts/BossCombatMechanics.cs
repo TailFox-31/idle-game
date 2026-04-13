@@ -12,6 +12,7 @@ namespace IdleGame
         EnrageThreshold = 4,
         ReflectWindow = 5,
         LastStand = 6,
+        PlayerBurst = 7,
     }
 
     public enum CombatMechanicTriggerMode
@@ -137,6 +138,7 @@ namespace IdleGame
             CombatMechanicType.GuardRecovery => IsWindowActive,
             CombatMechanicType.ReflectWindow => IsWindowActive,
             CombatMechanicType.LastStand => IsWindowActive,
+            CombatMechanicType.PlayerBurst => IsWindowActive,
             CombatMechanicType.WindUpBurst => burstState == WindUpBurstState.BurstReady,
             CombatMechanicType.EnrageThreshold => enrageTriggered,
             _ => false,
@@ -179,6 +181,7 @@ namespace IdleGame
                 case CombatMechanicType.GuardRecovery:
                 case CombatMechanicType.ReflectWindow:
                 case CombatMechanicType.LastStand:
+                case CombatMechanicType.PlayerBurst:
                     if (definition.TriggerMode == CombatMechanicTriggerMode.Manual)
                     {
                         timer = 0f;
@@ -253,12 +256,15 @@ namespace IdleGame
                 case CombatMechanicType.GuardRecovery:
                 case CombatMechanicType.ReflectWindow:
                 case CombatMechanicType.LastStand:
+                case CombatMechanicType.PlayerBurst:
                     if (definition.TriggerMode == CombatMechanicTriggerMode.Manual)
                     {
                         if (windowState == TimedWindowState.Active)
                         {
                             windowState = TimedWindowState.Cooldown;
-                            timer = GetCooldownDuration();
+                            timer = definition.Type == CombatMechanicType.PlayerBurst
+                                ? 0f
+                                : GetCooldownDuration();
                         }
                     }
                     else
@@ -337,6 +343,11 @@ namespace IdleGame
                 return Mathf.Max(1, Mathf.RoundToInt(baseDamage * Mathf.Max(1f, definition.AttackPowerMultiplier)));
             }
 
+            if (definition.Type == CombatMechanicType.PlayerBurst && IsWindowActive)
+            {
+                return Mathf.Max(1, Mathf.RoundToInt(baseDamage * Mathf.Max(1f, definition.AttackPowerMultiplier)));
+            }
+
             if (definition.Type == CombatMechanicType.FrenzyWindow && IsWindowActive)
             {
                 return Mathf.Max(1, Mathf.RoundToInt(baseDamage * Mathf.Max(0.1f, definition.AttackPowerMultiplier)));
@@ -382,6 +393,13 @@ namespace IdleGame
 
         public bool NotifyAttackResolved()
         {
+            if (definition.Type == CombatMechanicType.PlayerBurst && IsWindowActive)
+            {
+                windowState = TimedWindowState.Cooldown;
+                timer = GetCooldownDuration();
+                return true;
+            }
+
             if (definition.Type != CombatMechanicType.WindUpBurst || burstState != WindUpBurstState.BurstReady)
             {
                 return false;
@@ -436,7 +454,8 @@ namespace IdleGame
             return definition.Type == CombatMechanicType.FrenzyWindow
                 || definition.Type == CombatMechanicType.GuardRecovery
                 || definition.Type == CombatMechanicType.ReflectWindow
-                || definition.Type == CombatMechanicType.LastStand;
+                || definition.Type == CombatMechanicType.LastStand
+                || definition.Type == CombatMechanicType.PlayerBurst;
         }
 
         private bool IsWindowActive => windowState == TimedWindowState.Active;
@@ -498,6 +517,9 @@ namespace IdleGame
                     : string.Empty,
                 CombatMechanicType.LastStand => IsWindowActive
                     ? $"{definition.DisplayName} protection {timer:0.0}s"
+                    : string.Empty,
+                CombatMechanicType.PlayerBurst => IsWindowActive
+                    ? $"{definition.DisplayName} armed {timer:0.0}s"
                     : string.Empty,
                 _ => string.Empty,
             };
