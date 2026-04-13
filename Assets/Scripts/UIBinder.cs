@@ -30,7 +30,7 @@ namespace IdleGame
         private static readonly Vector2 RuntimeSkillPanelAnchor = new(0f, 0f);
         private static readonly Vector2 RuntimeSkillPanelPivot = new(0f, 0f);
         private static readonly Vector2 RuntimeSkillPanelPosition = new(380f, 20f);
-        private static readonly Vector2 RuntimeSkillPanelSize = new(636f, 72f);
+        private static readonly Vector2 RuntimeSkillPanelSize = new(676f, 72f);
         private static readonly Vector2 RuntimeSkillButtonSize = new(200f, 52f);
         private static readonly Vector2 LastStandButtonSize = new(240f, 52f);
         private static readonly Vector2 GuardButtonPosition = new(0f, 0f);
