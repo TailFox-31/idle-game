@@ -30,12 +30,13 @@ namespace IdleGame
         private static readonly Vector2 RuntimeSkillPanelAnchor = new(0f, 0f);
         private static readonly Vector2 RuntimeSkillPanelPivot = new(0f, 0f);
         private static readonly Vector2 RuntimeSkillPanelPosition = new(380f, 20f);
-        private static readonly Vector2 RuntimeSkillPanelSize = new(676f, 72f);
-        private static readonly Vector2 RuntimeSkillButtonSize = new(200f, 52f);
+        private static readonly Vector2 RuntimeSkillPanelSize = new(768f, 72f);
+        private static readonly Vector2 RuntimeSkillButtonSize = new(156f, 52f);
         private static readonly Vector2 LastStandButtonSize = new(240f, 52f);
         private static readonly Vector2 GuardButtonPosition = new(0f, 0f);
-        private static readonly Vector2 LastStandButtonPosition = new(212f, 0f);
-        private static readonly Vector2 BurstButtonPosition = new(464f, 0f);
+        private static readonly Vector2 LastStandButtonPosition = new(168f, 0f);
+        private static readonly Vector2 BurstButtonPosition = new(420f, 0f);
+        private static readonly Vector2 FrenzyButtonPosition = new(588f, 0f);
         private static readonly Vector2 AttackPowerUpgradeButtonPosition = new(0f, 0f);
         private static readonly Vector2 MaxHealthUpgradeButtonPosition = new(0f, -74f);
         private static readonly Vector2 HealthRegenUpgradeButtonPosition = new(0f, -148f);
@@ -112,6 +113,12 @@ namespace IdleGame
 
         [SerializeField]
         private TMP_Text burstButtonText;
+
+        [SerializeField]
+        private Button frenzyButton;
+
+        [SerializeField]
+        private TMP_Text frenzyButtonText;
 
         [Header("Wave Travel")]
         [SerializeField]
@@ -202,6 +209,11 @@ namespace IdleGame
             gameManager?.TryActivateBurst();
         }
 
+        public void RequestActivateFrenzy()
+        {
+            gameManager?.TryActivateFrenzy();
+        }
+
         public void RequestPreviousStartWave()
         {
             gameManager?.SelectPreviousStartWave();
@@ -225,6 +237,8 @@ namespace IdleGame
             EnsureGuardButton();
             EnsureLastStandButton();
             EnsureBurstButton();
+            EnsureFrenzyButton();
+            ConfigureSkillLayout();
             ConfigurePlayerReadout();
             ConfigureEnemyReadout();
             ConfigureWaveTravelLayout();
@@ -329,6 +343,7 @@ namespace IdleGame
             RefreshGuardButton(snapshot);
             RefreshLastStandButton(snapshot);
             RefreshBurstButton(snapshot);
+            RefreshFrenzyButton(snapshot);
 
             if (previousWaveButton != null)
             {
@@ -453,6 +468,30 @@ namespace IdleGame
             }
         }
 
+        private void RefreshFrenzyButton(GameSnapshot snapshot)
+        {
+            var frenzySkill = snapshot.Battle.FrenzySkill;
+            if (frenzyButtonText != null)
+            {
+                frenzyButtonText.text = string.IsNullOrWhiteSpace(frenzySkill.DisplayName)
+                    ? "Frenzy"
+                    : $"{frenzySkill.DisplayName}\n{frenzySkill.StatusText}";
+            }
+
+            if (frenzyButton != null)
+            {
+                frenzyButton.interactable = frenzySkill.IsReady;
+                if (frenzyButton.targetGraphic is Graphic graphic)
+                {
+                    graphic.color = frenzySkill.IsActive
+                        ? new Color32(96, 92, 146, 235)
+                        : frenzySkill.IsReady
+                            ? new Color32(50, 72, 96, 220)
+                            : new Color32(74, 74, 74, 200);
+                }
+            }
+        }
+
         private void RegisterButtons()
         {
             if (attackPowerButton != null)
@@ -498,6 +537,11 @@ namespace IdleGame
             if (burstButton != null)
             {
                 burstButton.onClick.AddListener(RequestActivateBurst);
+            }
+
+            if (frenzyButton != null)
+            {
+                frenzyButton.onClick.AddListener(RequestActivateFrenzy);
             }
 
             if (previousWaveButton != null)
@@ -561,6 +605,11 @@ namespace IdleGame
             if (burstButton != null)
             {
                 burstButton.onClick.RemoveListener(RequestActivateBurst);
+            }
+
+            if (frenzyButton != null)
+            {
+                frenzyButton.onClick.RemoveListener(RequestActivateFrenzy);
             }
 
             if (previousWaveButton != null)
@@ -751,6 +800,31 @@ namespace IdleGame
             ownsRuntimeSkillControls = true;
         }
 
+        private void EnsureFrenzyButton()
+        {
+            if (frenzyButtonText == null && frenzyButton != null)
+            {
+                frenzyButtonText = GetButtonLabel(frenzyButton);
+            }
+
+            if (frenzyButton != null)
+            {
+                return;
+            }
+
+            var parent = GetSkillParent();
+            if (parent == null)
+            {
+                return;
+            }
+
+            ConfigureSkillPanelRect(parent);
+            frenzyButton = CreateSkillButton(parent, "FrenzySkillButton", FrenzyButtonPosition, "Frenzy\nReady");
+            frenzyButtonText = GetButtonLabel(frenzyButton);
+            runtimeSkillObjects.Add(frenzyButton.gameObject);
+            ownsRuntimeSkillControls = true;
+        }
+
         private void EnsureWaveTravelControls()
         {
             if (travelButtonText == null && travelButton != null)
@@ -870,6 +944,8 @@ namespace IdleGame
             lastStandButtonText = null;
             burstButton = null;
             burstButtonText = null;
+            frenzyButton = null;
+            frenzyButtonText = null;
             ownsRuntimeSkillControls = false;
         }
 
@@ -929,6 +1005,16 @@ namespace IdleGame
             ConfigureWaveTravelButton(previousWaveButton, PreviousWaveButtonPosition, WaveTravelButtonSize);
             ConfigureWaveTravelButton(nextWaveButton, NextWaveButtonPosition, WaveTravelButtonSize);
             ConfigureWaveTravelButton(travelButton, TravelButtonPosition, TravelButtonSize);
+        }
+
+        private void ConfigureSkillLayout()
+        {
+            var panelRect = GetSkillParent();
+            ConfigureSkillPanelRect(panelRect);
+            ConfigureSkillButton(guardButton, GuardButtonPosition, RuntimeSkillButtonSize);
+            ConfigureSkillButton(lastStandButton, LastStandButtonPosition, LastStandButtonSize);
+            ConfigureSkillButton(burstButton, BurstButtonPosition, RuntimeSkillButtonSize);
+            ConfigureSkillButton(frenzyButton, FrenzyButtonPosition, RuntimeSkillButtonSize);
         }
 
         private void ConfigureWaveTravelReadout()
@@ -998,6 +1084,21 @@ namespace IdleGame
         }
 
         private static void ConfigureWaveTravelButton(Button button, Vector2 anchoredPosition, Vector2 sizeDelta)
+        {
+            if (button == null)
+            {
+                return;
+            }
+
+            var rectTransform = button.GetComponent<RectTransform>();
+            rectTransform.anchorMin = new Vector2(0f, 1f);
+            rectTransform.anchorMax = new Vector2(0f, 1f);
+            rectTransform.pivot = new Vector2(0f, 1f);
+            rectTransform.sizeDelta = sizeDelta;
+            rectTransform.anchoredPosition = anchoredPosition;
+        }
+
+        private static void ConfigureSkillButton(Button button, Vector2 anchoredPosition, Vector2 sizeDelta)
         {
             if (button == null)
             {
@@ -1387,6 +1488,11 @@ namespace IdleGame
             if (burstButton != null && burstButton.transform.parent is RectTransform burstParent)
             {
                 return burstParent;
+            }
+
+            if (frenzyButton != null && frenzyButton.transform.parent is RectTransform frenzyParent)
+            {
+                return frenzyParent;
             }
 
             var rootParent = GetUpgradeRootParent();

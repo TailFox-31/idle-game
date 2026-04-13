@@ -115,20 +115,21 @@ namespace IdleGame
             attackCooldown = Mathf.Max(0f, cooldown);
         }
 
-        public bool TryAttack(float deltaTime, float attackSpeedMultiplier = 1f)
+        public bool TryAttack(float deltaTime, float attackSpeedMultiplier = 1f, float minimumAttackInterval = 0f)
         {
             if (!IsAlive)
             {
                 return false;
             }
 
-            attackCooldown -= Mathf.Max(0f, deltaTime) * Mathf.Max(0f, attackSpeedMultiplier);
+            var normalizedAttackSpeedMultiplier = Mathf.Max(0f, attackSpeedMultiplier);
+            attackCooldown -= Mathf.Max(0f, deltaTime) * normalizedAttackSpeedMultiplier;
             if (attackCooldown > 0f)
             {
                 return false;
             }
 
-            attackCooldown += Stats.AttackInterval;
+            attackCooldown += Mathf.Max(Stats.AttackInterval, Mathf.Max(0f, minimumAttackInterval) * normalizedAttackSpeedMultiplier);
             return true;
         }
 
