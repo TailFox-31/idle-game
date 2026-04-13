@@ -71,6 +71,7 @@ namespace IdleGame
             string playerStateLabel,
             SkillSnapshot guardSkill,
             SkillSnapshot lastStandSkill,
+            SkillSnapshot burstSkill,
             int enemyHealth,
             int enemyMaxHealth,
             int enemyAttackPower,
@@ -90,6 +91,7 @@ namespace IdleGame
             PlayerStateLabel = string.IsNullOrWhiteSpace(playerStateLabel) ? string.Empty : playerStateLabel.Trim();
             GuardSkill = guardSkill;
             LastStandSkill = lastStandSkill;
+            BurstSkill = burstSkill;
             EnemyHealth = enemyHealth;
             EnemyMaxHealth = enemyMaxHealth;
             EnemyAttackPower = enemyAttackPower;
@@ -121,6 +123,8 @@ namespace IdleGame
 
         public SkillSnapshot LastStandSkill { get; }
 
+        public SkillSnapshot BurstSkill { get; }
+
         public int EnemyHealth { get; }
 
         public int EnemyMaxHealth { get; }
@@ -147,9 +151,11 @@ namespace IdleGame
         private readonly CombatMechanicRuntime enemyCombatMechanic = new();
         private readonly CombatMechanicRuntime playerGuardMechanic = new();
         private readonly CombatMechanicRuntime playerLastStandMechanic = new();
+        private readonly CombatMechanicRuntime playerBurstMechanic = new();
         private readonly float playerRespawnDelay;
         private CombatMechanicDefinition playerGuardDefinition;
         private CombatMechanicDefinition playerLastStandDefinition;
+        private CombatMechanicDefinition playerBurstDefinition;
         private EnemySpawnData enemySpawnData;
         private EnemySpawnData queuedEnemySpawnData;
         private float enemyRespawnRemaining;
@@ -161,7 +167,8 @@ namespace IdleGame
             EnemySpawnData initialEnemy,
             float playerRespawnDelay,
             CombatMechanicDefinition playerGuardDefinition,
-            CombatMechanicDefinition playerLastStandDefinition)
+            CombatMechanicDefinition playerLastStandDefinition,
+            CombatMechanicDefinition playerBurstDefinition)
         {
             player = new CombatantRuntime(playerStats);
             enemySpawnData = initialEnemy;
@@ -170,6 +177,7 @@ namespace IdleGame
             this.playerRespawnDelay = Mathf.Max(0f, playerRespawnDelay);
             this.playerGuardDefinition = playerGuardDefinition;
             this.playerLastStandDefinition = playerLastStandDefinition;
+            this.playerBurstDefinition = playerBurstDefinition;
             ResetPlayerRuntimeState();
         }
 
@@ -212,6 +220,13 @@ namespace IdleGame
             PublishState();
         }
 
+        public void SetPlayerBurstDefinition(CombatMechanicDefinition definition)
+        {
+            playerBurstDefinition = definition;
+            ResetPlayerBurstRuntimeState();
+            PublishState();
+        }
+
         public bool TryActivateGuard()
         {
             if (!player.IsAlive || !enemy.IsAlive)
@@ -220,6 +235,22 @@ namespace IdleGame
             }
 
             var activated = playerGuardMechanic.TryTrigger();
+            if (activated)
+            {
+                PublishState();
+            }
+
+            return activated;
+        }
+
+        public bool TryActivateBurst()
+        {
+            if (!player.IsAlive || !enemy.IsAlive)
+            {
+                return false;
+            }
+
+            var activated = playerBurstMechanic.TryTrigger();
             if (activated)
             {
                 PublishState();
@@ -298,6 +329,7 @@ namespace IdleGame
                 changed |= player.TryRegenerate(deltaTime);
                 changed |= playerGuardMechanic.Tick(deltaTime, player);
                 changed |= playerLastStandMechanic.Tick(deltaTime, player);
+                changed |= playerBurstMechanic.Tick(deltaTime, player);
                 changed |= enemyCombatMechanic.Tick(deltaTime, enemy);
 
                 var playerAttacks = player.TryAttack(deltaTime);
@@ -314,8 +346,10 @@ namespace IdleGame
 
                 if (playerAttacks)
                 {
-                    var outgoingPlayerDamage = enemyCombatMechanic.ModifyIncomingDamage(player.Stats.AttackPower);
+                    var burstPlayerDamage = playerBurstMechanic.ModifyOutgoingDamage(player.Stats.AttackPower);
+                    var outgoingPlayerDamage = enemyCombatMechanic.ModifyIncomingDamage(burstPlayerDamage);
                     var appliedDamage = enemy.ReceiveDamage(outgoingPlayerDamage);
+                    changed |= playerBurstMechanic.NotifyAttackResolved();
                     var hitReaction = enemyCombatMechanic.NotifyIncomingHitResolved(appliedDamage, enemy, player, ApplyIncomingDamageToPlayer);
                     changed |= hitReaction.StateChanged;
                     changed = true;
@@ -372,6 +406,7 @@ namespace IdleGame
                 BuildPlayerStateLabel(),
                 BuildGuardSnapshot(),
                 BuildLastStandSnapshot(),
+                BuildBurstSnapshot(),
                 enemy.CurrentHealth,
                 displayedEnemy.Stats.MaxHealth,
                 displayedEnemy.Stats.AttackPower,
@@ -387,6 +422,7 @@ namespace IdleGame
         {
             ResetPlayerGuardRuntimeState();
             ResetPlayerLastStandRuntimeState();
+            ResetPlayerBurstRuntimeState();
         }
 
         private void ResetPlayerGuardRuntimeState()
@@ -399,10 +435,16 @@ namespace IdleGame
             playerLastStandMechanic.Reset(playerLastStandDefinition, player.Stats.MaxHealth);
         }
 
+        private void ResetPlayerBurstRuntimeState()
+        {
+            playerBurstMechanic.Reset(playerBurstDefinition, player.Stats.MaxHealth);
+        }
+
         private void RefreshPlayerMechanicMaxHealth()
         {
             playerGuardMechanic.SetMaxHealth(player.Stats.MaxHealth);
             playerLastStandMechanic.SetMaxHealth(player.Stats.MaxHealth);
+            playerBurstMechanic.SetMaxHealth(player.Stats.MaxHealth);
         }
 
         private SkillSnapshot BuildGuardSnapshot()
@@ -463,6 +505,35 @@ namespace IdleGame
                 statusText);
         }
 
+        private SkillSnapshot BuildBurstSnapshot()
+        {
+            if (!playerBurstDefinition.IsDefined)
+            {
+                return default;
+            }
+
+            var isActive = player.IsAlive && enemy.IsAlive && playerBurstMechanic.IsActive;
+            var cooldownRemaining = player.IsAlive ? playerBurstMechanic.CooldownRemaining : 0f;
+            var isReady = player.IsAlive && enemy.IsAlive && playerBurstMechanic.CanTriggerManually;
+            var statusText = !player.IsAlive
+                ? "Down"
+                : !enemy.IsAlive
+                    ? "Waiting"
+                    : isActive
+                        ? $"Armed {playerBurstMechanic.ActiveRemaining:0.0}s"
+                        : cooldownRemaining > 0f
+                            ? $"Cooldown {cooldownRemaining:0.0}s"
+                            : "Ready";
+
+            return new SkillSnapshot(
+                playerBurstDefinition.DisplayName,
+                isReady,
+                isActive,
+                cooldownRemaining,
+                playerBurstMechanic.ActiveRemaining,
+                statusText);
+        }
+
         private string BuildPlayerStateLabel()
         {
             if (!player.IsAlive)
@@ -472,14 +543,29 @@ namespace IdleGame
 
             var guardState = playerGuardMechanic.StateText;
             var lastStandState = playerLastStandMechanic.StateText;
-            if (string.IsNullOrWhiteSpace(guardState))
+            var burstState = playerBurstMechanic.StateText;
+            var stateLabel = string.Empty;
+
+            if (!string.IsNullOrWhiteSpace(guardState))
             {
-                return lastStandState;
+                stateLabel = guardState;
             }
 
-            return string.IsNullOrWhiteSpace(lastStandState)
-                ? guardState
-                : $"{guardState} | {lastStandState}";
+            if (!string.IsNullOrWhiteSpace(lastStandState))
+            {
+                stateLabel = string.IsNullOrWhiteSpace(stateLabel)
+                    ? lastStandState
+                    : $"{stateLabel} | {lastStandState}";
+            }
+
+            if (!string.IsNullOrWhiteSpace(burstState))
+            {
+                stateLabel = string.IsNullOrWhiteSpace(stateLabel)
+                    ? burstState
+                    : $"{stateLabel} | {burstState}";
+            }
+
+            return stateLabel;
         }
 
         private int ApplyIncomingDamageToPlayer(int incomingDamage)

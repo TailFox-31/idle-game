@@ -166,6 +166,15 @@ namespace IdleGame
         [SerializeField, Min(0f)]
         private float lastStandCooldownDuration = 60f;
 
+        [SerializeField, Min(1f)]
+        private float burstAttackPowerMultiplier = 2.5f;
+
+        [SerializeField, Min(0.1f)]
+        private float burstArmedDuration = 4f;
+
+        [SerializeField, Min(0f)]
+        private float burstCooldownDuration = 12f;
+
         [Header("Milestone Rewards")]
         [SerializeField, Min(2)]
         private int milestoneWaveInterval = 5;
@@ -266,6 +275,11 @@ namespace IdleGame
         public bool TryActivateGuard()
         {
             return battleSystem != null && battleSystem.TryActivateGuard();
+        }
+
+        public bool TryActivateBurst()
+        {
+            return battleSystem != null && battleSystem.TryActivateBurst();
         }
 
         private void InitializeUpgradeStates()
@@ -424,7 +438,8 @@ namespace IdleGame
                 enemyController.CreateSpawnDataForWave(currentWave),
                 playerRespawnDelay,
                 BuildGuardDefinition(),
-                BuildLastStandDefinition());
+                BuildLastStandDefinition(),
+                BuildBurstDefinition());
             battleSystem.GoldAwarded += HandleGoldAwarded;
             battleSystem.EnemyDefeated += HandleEnemyDefeated;
             battleSystem.BattleStateChanged += _ => PublishState();
@@ -446,6 +461,7 @@ namespace IdleGame
             battleSystem.SetPlayerStats(BuildPlayerStats());
             battleSystem.SetPlayerGuardDefinition(BuildGuardDefinition());
             battleSystem.SetPlayerLastStandDefinition(BuildLastStandDefinition());
+            battleSystem.SetPlayerBurstDefinition(BuildBurstDefinition());
             battleSystem.SetEnemy(enemyController.CreateSpawnDataForWave(currentWave));
         }
 
@@ -512,6 +528,18 @@ namespace IdleGame
                 blocksAttacksWhileActive: false);
         }
 
+        private CombatMechanicDefinition BuildBurstDefinition()
+        {
+            return new CombatMechanicDefinition(
+                CombatMechanicType.PlayerBurst,
+                "Burst",
+                burstCooldownDuration,
+                burstArmedDuration,
+                attackPowerMultiplier: burstAttackPowerMultiplier,
+                triggerMode: CombatMechanicTriggerMode.Manual,
+                blocksAttacksWhileActive: false);
+        }
+
         private GameSnapshot BuildSnapshot()
         {
             var upgradeData = new UpgradeViewData[upgradeStates.Count];
@@ -532,7 +560,7 @@ namespace IdleGame
 
             var battle = battleSystem != null
                 ? battleSystem.Snapshot
-                : new BattleSnapshot(0, string.Empty, 0, 0, false, 0f, string.Empty, default, default, 0, 0, 0, 0f, 0, string.Empty, string.Empty, false, 0f);
+                : new BattleSnapshot(0, string.Empty, 0, 0, false, 0f, string.Empty, default, default, default, 0, 0, 0, 0f, 0, string.Empty, string.Empty, false, 0f);
 
             return new GameSnapshot(
                 gold,
