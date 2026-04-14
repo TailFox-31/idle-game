@@ -151,6 +151,7 @@ namespace IdleGame
     public sealed class AutoBattleSystem
     {
         private const float MinimumPlayerAttackInterval = 0.25f;
+        private const float MinimumPlayerFrenzyAttackInterval = 0.20f;
 
         private readonly CombatantRuntime player;
         private readonly CombatantRuntime enemy;
@@ -366,7 +367,10 @@ namespace IdleGame
                 changed |= playerFrenzyMechanic.Tick(deltaTime, player);
                 changed |= enemyCombatMechanic.Tick(deltaTime, enemy);
 
-                var playerAttacks = player.TryAttack(deltaTime, playerFrenzyMechanic.GetAttackSpeedMultiplier(), MinimumPlayerAttackInterval);
+                var minimumPlayerAttackInterval = playerFrenzyMechanic.IsActive
+                    ? MinimumPlayerFrenzyAttackInterval
+                    : MinimumPlayerAttackInterval;
+                var playerAttacks = player.TryAttack(deltaTime, playerFrenzyMechanic.GetAttackSpeedMultiplier(), minimumPlayerAttackInterval);
                 var enemyAttacks = enemyCombatMechanic.CanAttack && enemy.TryAttack(deltaTime, enemyCombatMechanic.GetAttackSpeedMultiplier());
                 if (!playerAttacks && !enemyAttacks)
                 {
