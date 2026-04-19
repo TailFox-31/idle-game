@@ -141,6 +141,8 @@ namespace IdleGame
 
         private const int FirstWave = 1;
         private const int BossWaveInterval = 10;
+        private const float MaxNormalAttacksPerSecond = 8f;
+        private const float MaxBossAttacksPerSecond = 6f;
         private static readonly BossFamilyProfile DefaultBossProfile = new("Enemy", "Elite", 2.8f, 1.55f, 1.1f, 0, 0f, 4f, 1f, 1f, CombatMechanicDefinition.None);
         private static readonly BossFamilyProfile[] DefaultBossProfiles =
         {
@@ -216,6 +218,8 @@ namespace IdleGame
                         healthRegenPerSecond: bossProfile.HealthRegenPerSecond);
                 behaviorLabel = bossProfile.BehaviorLabel;
             }
+
+            shapedStats = ClampEnemyAttackSpeed(shapedStats, isBossWave);
 
             var enemyName = isBossWave
                 ? BuildBossEnemyId(archetype.EnemyId)
@@ -338,6 +342,12 @@ namespace IdleGame
         private static bool IsBossWave(int wave)
         {
             return wave >= BossWaveInterval && wave % BossWaveInterval == 0;
+        }
+
+        private static CombatantStats ClampEnemyAttackSpeed(CombatantStats stats, bool isBoss)
+        {
+            var maxAttacksPerSecond = isBoss ? MaxBossAttacksPerSecond : MaxNormalAttacksPerSecond;
+            return stats.With(attacksPerSecond: Mathf.Min(stats.AttacksPerSecond, maxAttacksPerSecond));
         }
 
         private static string BuildBossEnemyId(string enemyArchetypeId)
