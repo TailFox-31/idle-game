@@ -14,6 +14,7 @@ namespace IdleGame.EditorTools
     {
         private const string OutputPath = "docs/balance-scenario-export.md";
         private static readonly CultureInfo Culture = CultureInfo.InvariantCulture;
+        private static readonly Encoding MarkdownEncoding = new UTF8Encoding(false);
         private static readonly int[] Waves = { 10, 30, 50, 80, 100, 200, 500, 1000, 2000 };
 
         private static readonly UpgradeModel[] Upgrades =
@@ -518,7 +519,7 @@ namespace IdleGame.EditorTools
             }
 
             Directory.CreateDirectory(Path.GetDirectoryName(OutputPath));
-            File.WriteAllText(OutputPath, builder.ToString().Replace("\r\n", "\n").TrimEnd() + "\n", Encoding.UTF8);
+            File.WriteAllText(OutputPath, builder.ToString().Replace("\r\n", "\n").TrimEnd() + "\n", MarkdownEncoding);
         }
 
         private sealed class Scenario
