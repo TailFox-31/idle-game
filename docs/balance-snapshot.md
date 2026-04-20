@@ -91,7 +91,7 @@ Effective incoming damage is calculated as `CombatDamage(enemy ATK, player DEF, 
 | Skill | Current effect | Balance relevance |
 |---|---|---|
 | Guard | Manual GuardRecovery. 8s cooldown, 3s active, incoming damage x0.68 before Defense/Armor, recovery 2% max HP/s, does not block attacks. | Smooths high single-hit damage. Since it modifies incoming damage before `CombatDamage`, it also improves the value of flat Defense and Armor on the reduced hit. |
-| Last Stand | Manual/auto survival trigger when incoming damage would defeat the player. Restores to 25% max HP, lasts 4s, incoming damage x0.75, 60s cooldown. | Prevents one lethal event, but the long cooldown means it cannot solve repeated high-wave boss hits by itself. |
+| Last Stand | Auto survival trigger when incoming damage would defeat the player. Restores to 25% max HP, lasts 4s, incoming damage x0.75, 60s cooldown. The UI button is status-only and non-interactive. | Prevents one lethal event, but the long cooldown means it cannot solve repeated high-wave boss hits by itself. |
 | Burst | Manual PlayerBurst. 12s cooldown, armed for up to 4s, next attack ATK x2.5, then enters cooldown. | Strong against high-Armor bosses only when the post-DEF/post-Armor hit remains high. On ReflectWindow bosses, Burst timing can increase retaliation risk. |
 | Frenzy | Manual FrenzyWindow. 18s cooldown, 5s active, player attack speed x1.6, uses 0.20s minimum attack interval while active. | Raises short-window DPS and helps convert large ATK into faster boss kills. It does not directly improve survival. |
 
