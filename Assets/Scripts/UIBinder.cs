@@ -1318,7 +1318,10 @@ namespace IdleGame
             var healthOrRespawn = battle.EnemyAlive
                 ? $"HP {battle.EnemyHealth}/{battle.EnemyMaxHealth}"
                 : $"Respawn {battle.EnemyRespawnRemaining:0.0}s";
-            var statsLine = $"{healthOrRespawn} | ATK {battle.EnemyAttackPower} | SPD {battle.EnemyAttacksPerSecond:0.00} | G {battle.EnemyGoldReward}";
+            var armorText = battle.EnemyArmorPercent > 0f
+                ? $" | Armor {Mathf.RoundToInt(battle.EnemyArmorPercent * 100f)}%"
+                : string.Empty;
+            var statsLine = $"{healthOrRespawn} | ATK {battle.EnemyAttackPower} | SPD {battle.EnemyAttacksPerSecond:0.00}{armorText} | G {battle.EnemyGoldReward}";
 
             if (string.IsNullOrWhiteSpace(battle.EnemyStateLabel) || !battle.EnemyAlive)
             {

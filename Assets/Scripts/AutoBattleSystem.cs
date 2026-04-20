@@ -5,7 +5,7 @@ namespace IdleGame
 {
     public readonly struct EnemySpawnData
     {
-        public EnemySpawnData(int wave, string enemyId, CombatantStats stats, int goldReward, float respawnDelay, string behaviorLabel, CombatMechanicDefinition bossMechanic, float openingAttackDelay = 0f)
+        public EnemySpawnData(int wave, string enemyId, CombatantStats stats, int goldReward, float respawnDelay, string behaviorLabel, CombatMechanicDefinition bossMechanic, float openingAttackDelay = 0f, float armorPercent = 0f)
         {
             Wave = Mathf.Max(1, wave);
             EnemyId = enemyId;
@@ -15,6 +15,7 @@ namespace IdleGame
             BehaviorLabel = string.IsNullOrWhiteSpace(behaviorLabel) ? string.Empty : behaviorLabel.Trim();
             BossMechanic = bossMechanic;
             OpeningAttackDelay = Mathf.Max(0f, openingAttackDelay);
+            ArmorPercent = Mathf.Clamp01(armorPercent);
         }
 
         public int Wave { get; }
@@ -32,6 +33,8 @@ namespace IdleGame
         public CombatMechanicDefinition BossMechanic { get; }
 
         public float OpeningAttackDelay { get; }
+
+        public float ArmorPercent { get; }
     }
 
     public readonly struct SkillSnapshot
@@ -78,6 +81,7 @@ namespace IdleGame
             int enemyAttackPower,
             float enemyAttacksPerSecond,
             int enemyGoldReward,
+            float enemyArmorPercent,
             string enemyBehaviorLabel,
             string enemyStateLabel,
             bool enemyAlive,
@@ -99,6 +103,7 @@ namespace IdleGame
             EnemyAttackPower = enemyAttackPower;
             EnemyAttacksPerSecond = enemyAttacksPerSecond;
             EnemyGoldReward = enemyGoldReward;
+            EnemyArmorPercent = Mathf.Clamp01(enemyArmorPercent);
             EnemyBehaviorLabel = string.IsNullOrWhiteSpace(enemyBehaviorLabel) ? string.Empty : enemyBehaviorLabel.Trim();
             EnemyStateLabel = string.IsNullOrWhiteSpace(enemyStateLabel) ? string.Empty : enemyStateLabel.Trim();
             EnemyAlive = enemyAlive;
@@ -138,6 +143,8 @@ namespace IdleGame
         public float EnemyAttacksPerSecond { get; }
 
         public int EnemyGoldReward { get; }
+
+        public float EnemyArmorPercent { get; }
 
         public string EnemyBehaviorLabel { get; }
 
@@ -386,7 +393,7 @@ namespace IdleGame
                 {
                     var burstPlayerDamage = playerBurstMechanic.ModifyOutgoingDamage(player.Stats.AttackPower);
                     var outgoingPlayerDamage = enemyCombatMechanic.ModifyIncomingDamage(burstPlayerDamage);
-                    var appliedDamage = enemy.ReceiveDamage(outgoingPlayerDamage);
+                    var appliedDamage = ApplyIncomingDamageToEnemy(outgoingPlayerDamage);
                     changed |= playerBurstMechanic.NotifyAttackResolved();
                     var hitReaction = enemyCombatMechanic.NotifyIncomingHitResolved(appliedDamage, enemy, player, ApplyIncomingDamageToPlayer);
                     changed |= hitReaction.StateChanged;
@@ -451,6 +458,7 @@ namespace IdleGame
                 displayedEnemy.Stats.AttackPower,
                 displayedEnemy.Stats.AttacksPerSecond,
                 displayedEnemy.GoldReward,
+                displayedEnemy.ArmorPercent,
                 displayedEnemy.BehaviorLabel,
                 enemy.IsAlive ? enemyCombatMechanic.StateText : string.Empty,
                 enemy.IsAlive,
@@ -662,6 +670,24 @@ namespace IdleGame
             }
 
             return player.ReceiveDamage(mitigatedDamage);
+        }
+
+        private int ApplyIncomingDamageToEnemy(int incomingDamage)
+        {
+            if (enemy == null || !enemy.IsAlive)
+            {
+                return 0;
+            }
+
+            var normalizedDamage = Mathf.Max(0, incomingDamage);
+            if (normalizedDamage <= 0)
+            {
+                return 0;
+            }
+
+            var afterFlat = Mathf.Max(1, normalizedDamage - enemy.Stats.FlatDamageReduction);
+            var finalDamage = Mathf.Max(1, Mathf.RoundToInt(afterFlat * (1f - enemySpawnData.ArmorPercent)));
+            return enemy.ReceiveDamage(finalDamage + enemy.Stats.FlatDamageReduction);
         }
 
         private static int GetAppliedDamage(CombatantRuntime target, int incomingDamage)
