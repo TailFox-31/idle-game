@@ -1187,12 +1187,7 @@ namespace IdleGame
             var buttonObject = new GameObject(name, typeof(RectTransform), typeof(Image), typeof(Button));
             buttonObject.transform.SetParent(parent, false);
 
-            var rectTransform = buttonObject.GetComponent<RectTransform>();
-            rectTransform.anchorMin = new Vector2(0f, 1f);
-            rectTransform.anchorMax = new Vector2(0f, 1f);
-            rectTransform.pivot = new Vector2(0f, 1f);
-            rectTransform.sizeDelta = RuntimeUpgradeButtonSize;
-            rectTransform.anchoredPosition = anchoredPosition;
+            ConfigureUpgradeButtonRect(buttonObject.GetComponent<RectTransform>(), anchoredPosition);
 
             var image = buttonObject.GetComponent<Image>();
             image.color = new Color32(50, 72, 96, 220);
@@ -1558,6 +1553,7 @@ namespace IdleGame
         {
             if (existingButton != null)
             {
+                ConfigureUpgradeButtonRect(existingButton.GetComponent<RectTransform>(), position);
                 return existingButton;
             }
 
@@ -1565,6 +1561,20 @@ namespace IdleGame
             var createdButton = CreateRuntimeUpgradeButton(parent, name, position, labelText);
             runtimeUpgradeObjects.Add(createdButton.gameObject);
             return createdButton;
+        }
+
+        private static void ConfigureUpgradeButtonRect(RectTransform rectTransform, Vector2 anchoredPosition)
+        {
+            if (rectTransform == null)
+            {
+                return;
+            }
+
+            rectTransform.anchorMin = new Vector2(0f, 1f);
+            rectTransform.anchorMax = new Vector2(0f, 1f);
+            rectTransform.pivot = new Vector2(0f, 1f);
+            rectTransform.sizeDelta = RuntimeUpgradeButtonSize;
+            rectTransform.anchoredPosition = anchoredPosition;
         }
     }
 }
