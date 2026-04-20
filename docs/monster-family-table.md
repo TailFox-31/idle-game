@@ -17,8 +17,36 @@ Enemy values come from `Assets/Scripts/EnemyController.cs`.
 - W101+ repeats the same 100-wave family table while HP, ATK, and gold continue to use the existing wave number.
 - Defense is flat damage reduction.
 - Armor is percent damage reduction stored as a ratio. For example, `0.25` means 25%.
-- Player damage dealt to enemies is mitigated as `afterFlat = max(1, incomingDamage - defense)`, then `finalDamage = max(1, afterFlat * (1 - armorPercent))`.
+- Damage mitigation uses the shared formula `afterFlat = max(1, incomingDamage - defense)`, then `finalDamage = max(1, RoundToInt(afterFlat * (1 - armorPercent)))`. Incoming damage less than or equal to 0 applies 0 damage.
+- Player damage dealt to enemies uses enemy Defense first, then enemy Armor. Player damage taken still uses Defense only because player Armor behavior has not been added.
 - Armor is family identity only. It does not grow by wave.
+
+## Damage Formula
+
+The shared damage calculation is centralized in `CombatDamage.CalculateAppliedDamage`.
+
+1. Clamp incoming damage to 0 or higher.
+2. If incoming damage is 0, apply 0 damage.
+3. Apply flat Defense first: `afterFlat = max(1, incomingDamage - defense)`.
+4. Apply Armor percent mitigation: `finalDamage = max(1, RoundToInt(afterFlat * (1 - armorPercent)))`.
+
+Current behavior parity:
+
+| Incoming | Defense | Armor | Before | After | Notes |
+|---:|---:|---:|---:|---:|---|
+| 20 | 0 | 0% | 20 | 20 | Baseline hit. |
+| 20 | 5 | 0% | 15 | 15 | Flat Defense only. |
+| 20 | 5 | 25% | 11 | 11 | `RoundToInt(15 * 0.75) = 11`. |
+| 3 | 5 | 30% | 1 | 1 | Positive incoming damage keeps the minimum 1 damage after mitigation. |
+| 0 | 5 | 30% | 0 | 0 | Zero incoming damage stays 0. |
+| -5 | 5 | 30% | 0 | 0 | Negative incoming damage stays 0. |
+
+Future modifiers should enter the pipeline by role:
+
+- Critical damage and outgoing damage multipliers should modify raw outgoing damage before target mitigation.
+- Armor penetration should adjust the target Armor value passed into the shared formula.
+- Defense penetration or shred should adjust the target Defense value passed into the shared formula.
+- Player Armor can use the same Armor input when that behavior is intentionally added; this pass keeps player Armor absent and preserves existing player Defense behavior.
 
 ## Wave Table
 
