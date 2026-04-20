@@ -1,6 +1,6 @@
 # 100-Wave Enemy Family Table
 
-Scope: enemy family progression and numeric spawn analysis only. This change does not add new mechanics, art, save schema, player systems, or HP/ATK/gold wave-scaling formula changes.
+Scope: enemy family progression, Armor behavior, and numeric spawn analysis only. This change does not add new mechanics, art, or HP/ATK/gold wave-scaling formula changes.
 
 ## Source Formulas
 
@@ -18,8 +18,9 @@ Enemy values come from `Assets/Scripts/EnemyController.cs`.
 - Defense is flat damage reduction.
 - Armor is percent damage reduction stored as a ratio. For example, `0.25` means 25%.
 - Damage mitigation uses the shared formula `afterFlat = max(1, incomingDamage - defense)`, then `finalDamage = max(1, RoundToInt(afterFlat * (1 - armorPercent)))`. Incoming damage less than or equal to 0 applies 0 damage.
-- Player damage dealt to enemies uses enemy Defense first, then enemy Armor. Player damage taken still uses Defense only because player Armor behavior has not been added.
-- Armor is family identity only. It does not grow by wave.
+- Player and enemy damage both use the same damage application path with target Defense first, then target Armor.
+- Enemy Armor is family identity only. It does not grow by wave.
+- Player Armor comes from the Armor upgrade track: base cost 18g, 1.55x cost multiplier, +2 percentage points per level, and a hard cap of 40% at level 20. No softcap is used.
 
 ## Damage Formula
 
@@ -36,17 +37,36 @@ Current behavior parity:
 |---:|---:|---:|---:|---:|---|
 | 20 | 0 | 0% | 20 | 20 | Baseline hit. |
 | 20 | 5 | 0% | 15 | 15 | Flat Defense only. |
-| 20 | 5 | 25% | 11 | 11 | `RoundToInt(15 * 0.75) = 11`. |
+| 20 | 5 | 25% | 15 | 11 | Defense applies first, then Armor: `RoundToInt(15 * 0.75) = 11`. |
 | 3 | 5 | 30% | 1 | 1 | Positive incoming damage keeps the minimum 1 damage after mitigation. |
 | 0 | 5 | 30% | 0 | 0 | Zero incoming damage stays 0. |
 | -5 | 5 | 30% | 0 | 0 | Negative incoming damage stays 0. |
+
+Player Armor parity examples:
+
+| Incoming | Player Defense | Player Armor | Applied damage | Notes |
+|---:|---:|---:|---:|---|
+| 20 | 5 | 0% | 15 | Same result as the previous player damage-taken path. |
+| 20 | 5 | 10% | 14 | Defense first: `20 - 5 = 15`, then `RoundToInt(15 * 0.90) = 14`. |
+| 40 | 8 | 40% | 19 | Capped Armor remains useful against high damage and boss hits. |
 
 Future modifiers should enter the pipeline by role:
 
 - Critical damage and outgoing damage multipliers should modify raw outgoing damage before target mitigation.
 - Armor penetration should adjust the target Armor value passed into the shared formula.
 - Defense penetration or shred should adjust the target Defense value passed into the shared formula.
-- Player Armor can use the same Armor input when that behavior is intentionally added; this pass keeps player Armor absent and preserves existing player Defense behavior.
+- Player Armor and enemy Armor both enter as `target.Stats.ArmorPercent`.
+
+## Player Defense And Armor
+
+Defense and Armor now both live on `CombatantStats`, but they are intentionally different defensive tracks:
+
+| Track | Cost | Effect | Primary strength |
+|---|---:|---|---|
+| Defense | 15g base, 1.60x multiplier | Flat -1 damage per level | Strong against small early hits. |
+| Armor | 18g base, 1.55x multiplier | +2 percentage points per level, hard-capped at 40% on level 20 | Stronger for high damage and boss hits. |
+
+Existing saves remain compatible because upgrade levels are loaded by `UpgradeTrack`; saves without an Armor entry initialize Armor level to 0. Reset Save clears Armor with the rest of the upgrade states.
 
 ## Wave Table
 
@@ -127,8 +147,9 @@ Normal rows use the final non-boss wave before each block boss. Boss rows use th
 - W51-W100 extends the table with Ghost, Knight, Shaman, Assassin, and Drake.
 - W101 repeats the family table back to Slime; W110 is Boss_Slime, W111 starts Boar, and W120 is Boss_Boar.
 - Existing mechanics only are used for new bosses: EnrageThreshold, GuardRecovery, WindUpBurst, and FrenzyWindow.
-- HP, ATK, gold, speed, regen, boss mechanics, wave travel, Reset Save, player skills, and save schema are unchanged by Armor.
-- The HUD displays non-zero Armor as `Armor N%`. It omits 0% Armor to avoid clutter in the existing compact enemy stat line.
+- HP, ATK, gold, speed, regen, boss mechanics, wave travel, and player skill values are unchanged by Armor.
+- The enemy HUD displays non-zero enemy Armor as `Armor N%`. It omits 0% Armor to avoid clutter in the existing compact enemy stat line.
+- The player HUD always displays player Armor as `Armor N%`, including 0%, so the Defense/Armor stat line stays explicit.
 
 ## Non-Goals
 
@@ -136,7 +157,7 @@ Normal rows use the final non-boss wave before each block boss. Boss rows use th
 - No buff system yet.
 - No new boss mechanic type.
 - No new art/assets.
-- No player skill or upgrade changes.
-- No player Armor behavior yet.
-- No save schema, wave travel, or Reset Save changes.
+- No player skill changes.
+- No Armor softcap.
+- No wave travel or Reset Save behavior changes beyond Armor being cleared consistently with other upgrades.
 - No HP/ATK/gold wave-scaling formula changes.

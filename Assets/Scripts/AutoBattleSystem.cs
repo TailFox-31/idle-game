@@ -5,7 +5,7 @@ namespace IdleGame
 {
     public readonly struct EnemySpawnData
     {
-        public EnemySpawnData(int wave, string enemyId, CombatantStats stats, int goldReward, float respawnDelay, string behaviorLabel, CombatMechanicDefinition bossMechanic, float openingAttackDelay = 0f, float armorPercent = 0f)
+        public EnemySpawnData(int wave, string enemyId, CombatantStats stats, int goldReward, float respawnDelay, string behaviorLabel, CombatMechanicDefinition bossMechanic, float openingAttackDelay = 0f)
         {
             Wave = Mathf.Max(1, wave);
             EnemyId = enemyId;
@@ -15,7 +15,6 @@ namespace IdleGame
             BehaviorLabel = string.IsNullOrWhiteSpace(behaviorLabel) ? string.Empty : behaviorLabel.Trim();
             BossMechanic = bossMechanic;
             OpeningAttackDelay = Mathf.Max(0f, openingAttackDelay);
-            ArmorPercent = Mathf.Clamp01(armorPercent);
         }
 
         public int Wave { get; }
@@ -33,8 +32,6 @@ namespace IdleGame
         public CombatMechanicDefinition BossMechanic { get; }
 
         public float OpeningAttackDelay { get; }
-
-        public float ArmorPercent { get; }
     }
 
     public readonly struct SkillSnapshot
@@ -393,7 +390,7 @@ namespace IdleGame
                 {
                     var burstPlayerDamage = playerBurstMechanic.ModifyOutgoingDamage(player.Stats.AttackPower);
                     var outgoingPlayerDamage = enemyCombatMechanic.ModifyIncomingDamage(burstPlayerDamage);
-                    var appliedDamage = ApplyIncomingDamageToEnemy(outgoingPlayerDamage);
+                    var appliedDamage = ApplyIncomingDamage(enemy, outgoingPlayerDamage);
                     changed |= playerBurstMechanic.NotifyAttackResolved();
                     var hitReaction = enemyCombatMechanic.NotifyIncomingHitResolved(appliedDamage, enemy, player, ApplyIncomingDamageToPlayer);
                     changed |= hitReaction.StateChanged;
@@ -458,7 +455,7 @@ namespace IdleGame
                 displayedEnemy.Stats.AttackPower,
                 displayedEnemy.Stats.AttacksPerSecond,
                 displayedEnemy.GoldReward,
-                displayedEnemy.ArmorPercent,
+                displayedEnemy.Stats.ArmorPercent,
                 displayedEnemy.BehaviorLabel,
                 enemy.IsAlive ? enemyCombatMechanic.StateText : string.Empty,
                 enemy.IsAlive,
@@ -663,37 +660,36 @@ namespace IdleGame
         {
             var guardedDamage = playerGuardMechanic.ModifyIncomingDamage(incomingDamage);
             var mitigatedDamage = playerLastStandMechanic.ModifyIncomingDamage(guardedDamage);
-            var appliedDamage = GetAppliedDamage(player, mitigatedDamage);
+            var appliedDamage = CalculateIncomingDamage(player, mitigatedDamage);
             if (appliedDamage >= player.CurrentHealth && playerLastStandMechanic.TryTriggerLastStand(player))
             {
                 return 0;
             }
 
-            return player.ReceiveDamage(mitigatedDamage);
+            return ApplyIncomingDamage(player, mitigatedDamage);
         }
 
-        private int ApplyIncomingDamageToEnemy(int incomingDamage)
-        {
-            if (enemy == null || !enemy.IsAlive)
-            {
-                return 0;
-            }
-
-            var appliedDamage = CombatDamage.CalculateAppliedDamage(
-                incomingDamage,
-                enemy.Stats.FlatDamageReduction,
-                enemySpawnData.ArmorPercent);
-            return enemy.ReceiveAppliedDamage(appliedDamage);
-        }
-
-        private static int GetAppliedDamage(CombatantRuntime target, int incomingDamage)
+        private static int ApplyIncomingDamage(CombatantRuntime target, int incomingDamage)
         {
             if (target == null || !target.IsAlive)
             {
                 return 0;
             }
 
-            return CombatDamage.CalculateAppliedDamage(incomingDamage, target.Stats.FlatDamageReduction);
+            return target.ReceiveAppliedDamage(CalculateIncomingDamage(target, incomingDamage));
+        }
+
+        private static int CalculateIncomingDamage(CombatantRuntime target, int incomingDamage)
+        {
+            if (target == null || !target.IsAlive)
+            {
+                return 0;
+            }
+
+            return CombatDamage.CalculateAppliedDamage(
+                incomingDamage,
+                target.Stats.FlatDamageReduction,
+                target.Stats.ArmorPercent);
         }
 
         private void PublishState()

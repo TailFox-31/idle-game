@@ -15,7 +15,9 @@ namespace IdleGame
             float attackSpeedBonus,
             int flatDamageReduction,
             float goldGainMultiplier,
-            float healthRegenPerSecond)
+            float healthRegenPerSecond,
+            float armorPercent,
+            bool isMaxed)
         {
             Track = track;
             Level = level;
@@ -26,6 +28,8 @@ namespace IdleGame
             FlatDamageReduction = flatDamageReduction;
             GoldGainMultiplier = goldGainMultiplier;
             HealthRegenPerSecond = healthRegenPerSecond;
+            ArmorPercent = armorPercent;
+            IsMaxed = isMaxed;
         }
 
         public UpgradeTrack Track { get; }
@@ -45,6 +49,10 @@ namespace IdleGame
         public float GoldGainMultiplier { get; }
 
         public float HealthRegenPerSecond { get; }
+
+        public float ArmorPercent { get; }
+
+        public bool IsMaxed { get; }
     }
 
     public readonly struct GameSnapshot
@@ -435,6 +443,13 @@ namespace IdleGame
                     15,
                     1.60f,
                     flatDamageReductionPerLevel: 1),
+                new UpgradeDefinition(
+                    UpgradeTrack.Armor,
+                    18,
+                    1.55f,
+                    armorPercentPerLevel: 0.02f,
+                    maxArmorPercent: 0.40f,
+                    maxLevel: 20),
                 new UpgradeDefinition(UpgradeTrack.AttackSpeed, 16, 1.34f, attackSpeedPerLevel: 0.18f),
                 new UpgradeDefinition(UpgradeTrack.GoldGain, 18, 1.38f, goldGainMultiplierPerLevel: 0.18f),
             };
@@ -583,7 +598,9 @@ namespace IdleGame
                     state.Definition.GetAttackSpeedBonus(state.Level),
                     state.Definition.GetFlatDamageReduction(state.Level),
                     state.Definition.GetGoldGainMultiplier(state.Level),
-                    state.Definition.GetHealthRegenPerSecond(state.Level));
+                    state.Definition.GetHealthRegenPerSecond(state.Level),
+                    state.Definition.GetArmorPercent(state.Level),
+                    state.Definition.HasMaxLevel && state.Level >= state.Definition.MaxLevel);
             }
 
             var battle = battleSystem != null

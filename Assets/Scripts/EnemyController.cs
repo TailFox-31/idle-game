@@ -218,7 +218,8 @@ namespace IdleGame
                 archetype.AttackSpeedMultiplier)
                 .Add(
                     flatDamageReduction: archetype.FlatDamageReduction,
-                    healthRegenPerSecond: archetype.HealthRegenPerSecond);
+                    healthRegenPerSecond: archetype.HealthRegenPerSecond,
+                    armorPercent: archetype.ArmorPercent);
             var bossProfile = isBossWave ? GetBossProfile(archetype.EnemyId) : DefaultBossProfile;
             var behaviorLabel = string.Empty;
             if (isBossWave)
@@ -229,7 +230,8 @@ namespace IdleGame
                     bossProfile.AttackSpeedMultiplier)
                     .Add(
                         flatDamageReduction: bossProfile.FlatDamageReduction,
-                        healthRegenPerSecond: bossProfile.HealthRegenPerSecond);
+                        healthRegenPerSecond: bossProfile.HealthRegenPerSecond,
+                        armorPercent: bossProfile.ArmorPercent);
                 behaviorLabel = bossProfile.BehaviorLabel;
             }
 
@@ -256,8 +258,7 @@ namespace IdleGame
                 resolvedRespawnDelay,
                 behaviorLabel,
                 isBossWave ? bossProfile.BossMechanic : CombatMechanicDefinition.None,
-                openingAttackDelay,
-                Mathf.Clamp01(archetype.ArmorPercent + (isBossWave ? bossProfile.ArmorPercent : 0f)));
+                openingAttackDelay);
         }
 
         private EnemyArchetypeStage GetArchetypeForWave(int wave)

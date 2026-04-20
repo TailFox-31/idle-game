@@ -52,6 +52,7 @@ public static class IdleGamePrototypeSceneBuilder
     private const string AttackPowerButtonName = "AttackPowerUpgradeButton";
     private const string AttackSpeedButtonName = "AttackSpeedUpgradeButton";
     private const string DefenseButtonName = "DefenseUpgradeButton";
+    private const string ArmorButtonName = "ArmorUpgradeButton";
     private const string MaxHealthButtonName = "MaxHealthUpgradeButton";
     private const string HealthRegenButtonName = "HealthRegenUpgradeButton";
     private const string GoldGainButtonName = "GoldGainUpgradeButton";
@@ -92,7 +93,7 @@ public static class IdleGamePrototypeSceneBuilder
         ConfigureHeaderPanel(headerPanel);
 
         var goldReadout = EnsureReadout(headerPanel, GoldReadoutName, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(20f, -20f), "G 0 | Loot +0% | W1 | N5");
-        var playerStatsReadout = EnsureReadout(headerPanel, PlayerStatsReadoutName, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(20f, -66f), "ATK 0 | SPD 0.00 | DEF 0");
+        var playerStatsReadout = EnsureReadout(headerPanel, PlayerStatsReadoutName, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(20f, -66f), "ATK 0 | SPD 0.00 | DEF 0 | Armor 0%");
         ConfigurePlayerReadout(playerStatsReadout);
         var enemyStatusReadout = EnsureReadout(headerPanel, EnemyStatusReadoutName, new Vector2(1f, 1f), new Vector2(1f, 1f), EnemyStatusReadoutPosition, "Enemy HP 0/0");
         ConfigureEnemyReadout(enemyStatusReadout);
@@ -116,8 +117,9 @@ public static class IdleGamePrototypeSceneBuilder
         var maxHealthButton = EnsureButton(upgradesPanel, MaxHealthButtonName, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, -74f), "Health +0 (14g)");
         var healthRegenButton = EnsureButton(upgradesPanel, HealthRegenButtonName, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, -148f), "Regen +0.0/s (15g)");
         var defenseButton = EnsureButton(upgradesPanel, DefenseButtonName, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, -222f), "Defense -0 dmg (14g)");
-        var attackSpeedButton = EnsureButton(upgradesPanel, AttackSpeedButtonName, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, -296f), "Speed +0.00/s (16g)");
-        var goldGainButton = EnsureButton(upgradesPanel, GoldGainButtonName, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, -370f), "Bounty +0% (18g)");
+        var armorButton = EnsureButton(upgradesPanel, ArmorButtonName, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, -296f), "Armor +0% (18g)");
+        var attackSpeedButton = EnsureButton(upgradesPanel, AttackSpeedButtonName, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, -370f), "Speed +0.00/s (16g)");
+        var goldGainButton = EnsureButton(upgradesPanel, GoldGainButtonName, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, -444f), "Bounty +0% (18g)");
         var skillPanel = EnsureChildRectTransform(upgradesPanel, RuntimeSkillPanelName);
         ConfigureSkillPanel(skillPanel);
         var guardButton = EnsureButton(skillPanel, GuardButtonName, new Vector2(0f, 1f), new Vector2(0f, 1f), GuardButtonPosition, "Guard\nReady", RuntimeSkillButtonSize, 20f);
@@ -138,7 +140,7 @@ public static class IdleGamePrototypeSceneBuilder
         var uiBinder = EnsureComponent<UIBinder>(uiBinderObject);
 
         WireGameManager(gameManager, enemyController, uiBinder);
-        WireUiBinder(uiBinder, goldReadout, playerStatsReadout, enemyStatusReadout, startWaveReadout, previousWaveButton, nextWaveButton, travelButton, attackPowerButton, maxHealthButton, healthRegenButton, defenseButton, attackSpeedButton, goldGainButton, resetSaveButton, guardButton, lastStandButton, burstButton, frenzyButton);
+        WireUiBinder(uiBinder, goldReadout, playerStatsReadout, enemyStatusReadout, startWaveReadout, previousWaveButton, nextWaveButton, travelButton, attackPowerButton, maxHealthButton, healthRegenButton, defenseButton, armorButton, attackSpeedButton, goldGainButton, resetSaveButton, guardButton, lastStandButton, burstButton, frenzyButton);
 
         EditorSceneManager.MarkSceneDirty(scene);
         Selection.activeGameObject = systemsRoot;
@@ -228,6 +230,7 @@ public static class IdleGamePrototypeSceneBuilder
         Button maxHealthButton,
         Button healthRegenButton,
         Button defenseButton,
+        Button armorButton,
         Button attackSpeedButton,
         Button goldGainButton,
         Button resetSaveButton,
@@ -253,6 +256,8 @@ public static class IdleGamePrototypeSceneBuilder
         SetObjectReference(serializedObject, "healthRegenButtonText", GetButtonLabel(healthRegenButton));
         SetObjectReference(serializedObject, "defenseButton", defenseButton);
         SetObjectReference(serializedObject, "defenseButtonText", GetButtonLabel(defenseButton));
+        SetObjectReference(serializedObject, "armorButton", armorButton);
+        SetObjectReference(serializedObject, "armorButtonText", GetButtonLabel(armorButton));
         SetObjectReference(serializedObject, "attackSpeedButton", attackSpeedButton);
         SetObjectReference(serializedObject, "attackSpeedButtonText", GetButtonLabel(attackSpeedButton));
         SetObjectReference(serializedObject, "goldGainButton", goldGainButton);
@@ -452,7 +457,7 @@ public static class IdleGamePrototypeSceneBuilder
         rectTransform.anchorMax = new Vector2(0f, 0f);
         rectTransform.pivot = new Vector2(0f, 0f);
         rectTransform.anchoredPosition = new Vector2(20f, 20f);
-        rectTransform.sizeDelta = new Vector2(340f, 448f);
+        rectTransform.sizeDelta = new Vector2(340f, 522f);
     }
 
     private static void ConfigureSkillPanel(RectTransform rectTransform)

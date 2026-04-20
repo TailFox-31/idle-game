@@ -33,6 +33,9 @@ namespace IdleGame
         [SerializeField, Min(0)]
         private int flatDamageReduction;
 
+        [SerializeField, Range(0f, 1f)]
+        private float armorPercent;
+
         [SerializeField, Min(0f)]
         private float healthRegenPerSecond;
 
@@ -44,47 +47,53 @@ namespace IdleGame
 
         public int FlatDamageReduction => flatDamageReduction;
 
+        public float ArmorPercent => Mathf.Clamp01(armorPercent);
+
         public float HealthRegenPerSecond => healthRegenPerSecond;
 
-        public CombatantStats(int maxHealth, int attackPower, float attacksPerSecond, int flatDamageReduction = 0, float healthRegenPerSecond = 0f)
+        public CombatantStats(int maxHealth, int attackPower, float attacksPerSecond, int flatDamageReduction = 0, float healthRegenPerSecond = 0f, float armorPercent = 0f)
         {
             this.maxHealth = Mathf.Max(1, maxHealth);
             this.attackPower = Mathf.Max(1, attackPower);
             this.attacksPerSecond = Mathf.Max(0.1f, attacksPerSecond);
             this.flatDamageReduction = Mathf.Max(0, flatDamageReduction);
+            this.armorPercent = Mathf.Clamp01(armorPercent);
             this.healthRegenPerSecond = Mathf.Max(0f, healthRegenPerSecond);
         }
 
         public float AttackInterval => 1f / AttacksPerSecond;
 
-        public CombatantStats With(int? maxHealth = null, int? attackPower = null, float? attacksPerSecond = null, int? flatDamageReduction = null, float? healthRegenPerSecond = null)
+        public CombatantStats With(int? maxHealth = null, int? attackPower = null, float? attacksPerSecond = null, int? flatDamageReduction = null, float? healthRegenPerSecond = null, float? armorPercent = null)
         {
             return new CombatantStats(
                 maxHealth ?? MaxHealth,
                 attackPower ?? AttackPower,
                 attacksPerSecond ?? AttacksPerSecond,
                 flatDamageReduction ?? FlatDamageReduction,
-                healthRegenPerSecond ?? HealthRegenPerSecond);
+                healthRegenPerSecond ?? HealthRegenPerSecond,
+                armorPercent ?? ArmorPercent);
         }
 
-        public CombatantStats Add(int maxHealth = 0, int attackPower = 0, float attacksPerSecond = 0f, int flatDamageReduction = 0, float healthRegenPerSecond = 0f)
+        public CombatantStats Add(int maxHealth = 0, int attackPower = 0, float attacksPerSecond = 0f, int flatDamageReduction = 0, float healthRegenPerSecond = 0f, float armorPercent = 0f)
         {
             return new CombatantStats(
                 MaxHealth + maxHealth,
                 AttackPower + attackPower,
                 AttacksPerSecond + attacksPerSecond,
                 FlatDamageReduction + flatDamageReduction,
-                HealthRegenPerSecond + healthRegenPerSecond);
+                HealthRegenPerSecond + healthRegenPerSecond,
+                ArmorPercent + armorPercent);
         }
 
-        public CombatantStats Multiply(float healthMultiplier = 1f, float attackPowerMultiplier = 1f, float attacksPerSecondMultiplier = 1f, float flatDamageReductionMultiplier = 1f, float healthRegenPerSecondMultiplier = 1f)
+        public CombatantStats Multiply(float healthMultiplier = 1f, float attackPowerMultiplier = 1f, float attacksPerSecondMultiplier = 1f, float flatDamageReductionMultiplier = 1f, float healthRegenPerSecondMultiplier = 1f, float armorPercentMultiplier = 1f)
         {
             return new CombatantStats(
                 Mathf.Max(1, Mathf.RoundToInt(MaxHealth * Mathf.Max(0f, healthMultiplier))),
                 Mathf.Max(1, Mathf.RoundToInt(AttackPower * Mathf.Max(0f, attackPowerMultiplier))),
                 Mathf.Max(0.1f, AttacksPerSecond * Mathf.Max(0f, attacksPerSecondMultiplier)),
                 Mathf.Max(0, Mathf.RoundToInt(FlatDamageReduction * Mathf.Max(0f, flatDamageReductionMultiplier))),
-                Mathf.Max(0f, HealthRegenPerSecond * Mathf.Max(0f, healthRegenPerSecondMultiplier)));
+                Mathf.Max(0f, HealthRegenPerSecond * Mathf.Max(0f, healthRegenPerSecondMultiplier)),
+                Mathf.Clamp01(ArmorPercent * Mathf.Max(0f, armorPercentMultiplier)));
         }
     }
 
@@ -192,7 +201,7 @@ namespace IdleGame
                 return 0;
             }
 
-            return ReceiveAppliedDamage(CombatDamage.CalculateAppliedDamage(damage, Stats.FlatDamageReduction));
+            return ReceiveAppliedDamage(CombatDamage.CalculateAppliedDamage(damage, Stats.FlatDamageReduction, Stats.ArmorPercent));
         }
 
         public int ReceiveAppliedDamage(int appliedDamage)
