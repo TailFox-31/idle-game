@@ -11,6 +11,7 @@ namespace IdleGame
         AttackSpeed = 3,
         GoldGain = 4,
         HealthRegen = 5,
+        Armor = 6,
     }
 
     [Serializable]
@@ -43,6 +44,15 @@ namespace IdleGame
         [SerializeField, Min(0f)]
         private float healthRegenPerSecondPerLevel = 0f;
 
+        [SerializeField, Range(0f, 1f)]
+        private float armorPercentPerLevel = 0f;
+
+        [SerializeField, Range(0f, 1f)]
+        private float maxArmorPercent = 0f;
+
+        [SerializeField, Min(0)]
+        private int maxLevel = 0;
+
         [SerializeField, Min(0)]
         private int fullEffectLevels = 0;
 
@@ -63,6 +73,9 @@ namespace IdleGame
             int flatDamageReductionPerLevel = 0,
             float goldGainMultiplierPerLevel = 0f,
             float healthRegenPerSecondPerLevel = 0f,
+            float armorPercentPerLevel = 0f,
+            float maxArmorPercent = 0f,
+            int maxLevel = 0,
             int fullEffectLevels = 0,
             float postSoftCapEffectMultiplier = 1f)
         {
@@ -75,11 +88,18 @@ namespace IdleGame
             this.flatDamageReductionPerLevel = Mathf.Max(0, flatDamageReductionPerLevel);
             this.goldGainMultiplierPerLevel = Mathf.Max(0f, goldGainMultiplierPerLevel);
             this.healthRegenPerSecondPerLevel = Mathf.Max(0f, healthRegenPerSecondPerLevel);
+            this.armorPercentPerLevel = Mathf.Clamp01(armorPercentPerLevel);
+            this.maxArmorPercent = Mathf.Clamp01(maxArmorPercent);
+            this.maxLevel = Mathf.Max(0, maxLevel);
             this.fullEffectLevels = Mathf.Max(0, fullEffectLevels);
             this.postSoftCapEffectMultiplier = Mathf.Clamp01(postSoftCapEffectMultiplier);
         }
 
         public UpgradeTrack Track => track;
+
+        public int MaxLevel => maxLevel;
+
+        public bool HasMaxLevel => maxLevel > 0;
 
         public bool UsesLegacyDefaultBalanceValues()
         {
@@ -91,6 +111,7 @@ namespace IdleGame
                     && Mathf.Approximately(healthRegenPerSecondPerLevel, 1f)
                     && fullEffectLevels == 0
                     && Mathf.Approximately(postSoftCapEffectMultiplier, 1f),
+                UpgradeTrack.Armor => false,
                 _ => false,
             };
         }
@@ -114,6 +135,11 @@ namespace IdleGame
 
         public int GetCost(int currentLevel)
         {
+            if (HasMaxLevel && currentLevel >= maxLevel)
+            {
+                return 0;
+            }
+
             var scaled = startingCost * Mathf.Pow(costMultiplier, Mathf.Max(0, currentLevel));
             return Mathf.Max(1, Mathf.CeilToInt(scaled));
         }
@@ -171,6 +197,19 @@ namespace IdleGame
                 : 0;
         }
 
+        public float GetArmorPercent(int level)
+        {
+            if (level <= 0 || track != UpgradeTrack.Armor)
+            {
+                return 0f;
+            }
+
+            var armorPercent = armorPercentPerLevel * Mathf.Max(0, level);
+            return maxArmorPercent > 0f
+                ? Mathf.Min(maxArmorPercent, armorPercent)
+                : Mathf.Clamp01(armorPercent);
+        }
+
         public CombatantStats Apply(CombatantStats stats, int level)
         {
             if (level <= 0)
@@ -186,6 +225,7 @@ namespace IdleGame
                 UpgradeTrack.AttackSpeed => stats.Add(attacksPerSecond: attackSpeedPerLevel * level),
                 UpgradeTrack.GoldGain => stats,
                 UpgradeTrack.HealthRegen => stats.Add(healthRegenPerSecond: GetHealthRegenPerSecond(level)),
+                UpgradeTrack.Armor => stats.Add(armorPercent: GetArmorPercent(level)),
                 _ => stats,
             };
         }
@@ -217,6 +257,11 @@ namespace IdleGame
 
         public bool TryPurchase(ref int gold)
         {
+            if (Definition.HasMaxLevel && Level >= Definition.MaxLevel)
+            {
+                return false;
+            }
+
             var cost = CurrentCost;
             if (gold < cost)
             {

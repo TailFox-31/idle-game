@@ -25,7 +25,7 @@ namespace IdleGame
         private static readonly Vector2 RuntimeUpgradePanelAnchor = new(0f, 0f);
         private static readonly Vector2 RuntimeUpgradePanelPivot = new(0f, 0f);
         private static readonly Vector2 RuntimeUpgradePanelPosition = new(20f, 20f);
-        private static readonly Vector2 RuntimeUpgradePanelSize = new(340f, 448f);
+        private static readonly Vector2 RuntimeUpgradePanelSize = new(340f, 522f);
         private static readonly Vector2 RuntimeUpgradeButtonSize = new(320f, 58f);
         private static readonly Vector2 RuntimeSkillPanelAnchor = new(0f, 0f);
         private static readonly Vector2 RuntimeSkillPanelPivot = new(0f, 0f);
@@ -41,8 +41,9 @@ namespace IdleGame
         private static readonly Vector2 MaxHealthUpgradeButtonPosition = new(0f, -74f);
         private static readonly Vector2 HealthRegenUpgradeButtonPosition = new(0f, -148f);
         private static readonly Vector2 DefenseUpgradeButtonPosition = new(0f, -222f);
-        private static readonly Vector2 AttackSpeedUpgradeButtonPosition = new(0f, -296f);
-        private static readonly Vector2 GoldGainUpgradeButtonPosition = new(0f, -370f);
+        private static readonly Vector2 ArmorUpgradeButtonPosition = new(0f, -296f);
+        private static readonly Vector2 AttackSpeedUpgradeButtonPosition = new(0f, -370f);
+        private static readonly Vector2 GoldGainUpgradeButtonPosition = new(0f, -444f);
 
         [Header("Readouts")]
         [SerializeField]
@@ -72,6 +73,12 @@ namespace IdleGame
 
         [SerializeField]
         private TMP_Text defenseButtonText;
+
+        [SerializeField]
+        private Button armorButton;
+
+        [SerializeField]
+        private TMP_Text armorButtonText;
 
         [SerializeField]
         private Button maxHealthButton;
@@ -177,6 +184,11 @@ namespace IdleGame
         public void RequestDefenseUpgrade()
         {
             gameManager?.TryPurchaseUpgrade(UpgradeTrack.Defense);
+        }
+
+        public void RequestArmorUpgrade()
+        {
+            gameManager?.TryPurchaseUpgrade(UpgradeTrack.Armor);
         }
 
         public void RequestMaxHealthUpgrade()
@@ -312,9 +324,10 @@ namespace IdleGame
             if (playerStatsText != null)
             {
                 var regenPerSecond = GetHealthRegenPerSecond(snapshot);
+                var armorPercent = Mathf.RoundToInt(snapshot.PlayerStats.ArmorPercent * 100f);
                 var playerReadout = snapshot.Battle.PlayerAlive
-                    ? $"HP {snapshot.Battle.PlayerHealth}/{snapshot.Battle.PlayerMaxHealth} | ATK {snapshot.PlayerStats.AttackPower} | SPD {snapshot.PlayerStats.AttacksPerSecond:0.00} | DEF {snapshot.PlayerStats.FlatDamageReduction} | REG {regenPerSecond:0.0}/s | M+{snapshot.MilestoneAttackBonus}"
-                    : $"HP 0/{snapshot.Battle.PlayerMaxHealth} | Down {snapshot.Battle.PlayerRespawnRemaining:0.0}s | ATK {snapshot.PlayerStats.AttackPower} | DEF {snapshot.PlayerStats.FlatDamageReduction} | REG {regenPerSecond:0.0}/s";
+                    ? $"HP {snapshot.Battle.PlayerHealth}/{snapshot.Battle.PlayerMaxHealth} | ATK {snapshot.PlayerStats.AttackPower} | SPD {snapshot.PlayerStats.AttacksPerSecond:0.00} | DEF {snapshot.PlayerStats.FlatDamageReduction} | Armor {armorPercent}% | REG {regenPerSecond:0.0}/s | M+{snapshot.MilestoneAttackBonus}"
+                    : $"HP 0/{snapshot.Battle.PlayerMaxHealth} | Down {snapshot.Battle.PlayerRespawnRemaining:0.0}s | ATK {snapshot.PlayerStats.AttackPower} | DEF {snapshot.PlayerStats.FlatDamageReduction} | Armor {armorPercent}% | REG {regenPerSecond:0.0}/s";
                 if (!string.IsNullOrWhiteSpace(snapshot.Battle.PlayerStateLabel))
                 {
                     playerReadout = $"{playerReadout}\n<color=#8FD694>{snapshot.Battle.PlayerStateLabel}</color>";
@@ -338,6 +351,7 @@ namespace IdleGame
             RefreshUpgradeButton(snapshot, UpgradeTrack.MaxHealth, maxHealthButton, maxHealthButtonText);
             RefreshUpgradeButton(snapshot, UpgradeTrack.HealthRegen, healthRegenButton, healthRegenButtonText);
             RefreshUpgradeButton(snapshot, UpgradeTrack.Defense, defenseButton, defenseButtonText);
+            RefreshUpgradeButton(snapshot, UpgradeTrack.Armor, armorButton, armorButtonText);
             RefreshUpgradeButton(snapshot, UpgradeTrack.AttackSpeed, attackSpeedButton, attackSpeedButtonText);
             RefreshUpgradeButton(snapshot, UpgradeTrack.GoldGain, goldGainButton, goldGainButtonText);
             RefreshGuardButton(snapshot);
@@ -392,7 +406,7 @@ namespace IdleGame
 
             if (button != null && data.HasValue)
             {
-                button.interactable = snapshot.Gold >= data.Value.NextCost;
+                button.interactable = !data.Value.IsMaxed && snapshot.Gold >= data.Value.NextCost;
             }
         }
 
@@ -519,6 +533,11 @@ namespace IdleGame
                 defenseButton.onClick.AddListener(RequestDefenseUpgrade);
             }
 
+            if (armorButton != null)
+            {
+                armorButton.onClick.AddListener(RequestArmorUpgrade);
+            }
+
             if (goldGainButton != null)
             {
                 goldGainButton.onClick.AddListener(RequestGoldGainUpgrade);
@@ -585,6 +604,11 @@ namespace IdleGame
             if (defenseButton != null)
             {
                 defenseButton.onClick.RemoveListener(RequestDefenseUpgrade);
+            }
+
+            if (armorButton != null)
+            {
+                armorButton.onClick.RemoveListener(RequestArmorUpgrade);
             }
 
             if (goldGainButton != null)
@@ -717,6 +741,8 @@ namespace IdleGame
             healthRegenButtonText = GetButtonLabel(healthRegenButton);
             defenseButton = EnsureUpgradeButton(parent, defenseButton, "DefenseUpgradeButton", DefenseUpgradeButtonPosition, "Defense -0 dmg (14g)", ref ownsRuntimeUpgradeControls);
             defenseButtonText = GetButtonLabel(defenseButton);
+            armorButton = EnsureUpgradeButton(parent, armorButton, "ArmorUpgradeButton", ArmorUpgradeButtonPosition, "Armor +0% (18g)", ref ownsRuntimeUpgradeControls);
+            armorButtonText = GetButtonLabel(armorButton);
             attackSpeedButton = EnsureUpgradeButton(parent, attackSpeedButton, "AttackSpeedUpgradeButton", AttackSpeedUpgradeButtonPosition, "Speed +0.00/s (16g)", ref ownsRuntimeUpgradeControls);
             attackSpeedButtonText = GetButtonLabel(attackSpeedButton);
             goldGainButton = EnsureUpgradeButton(parent, goldGainButton, "GoldGainUpgradeButton", GoldGainUpgradeButtonPosition, "Bounty +0% (18g)", ref ownsRuntimeUpgradeControls);
@@ -1339,6 +1365,7 @@ namespace IdleGame
                 UpgradeTrack.MaxHealth => "Health",
                 UpgradeTrack.HealthRegen => "Regen",
                 UpgradeTrack.Defense => "Defense",
+                UpgradeTrack.Armor => "Armor",
                 UpgradeTrack.AttackSpeed => "Speed",
                 UpgradeTrack.GoldGain => "Bounty",
                 _ => track.ToString(),
@@ -1359,15 +1386,17 @@ namespace IdleGame
 
         private static string BuildUpgradeButtonText(UpgradeTrack track, UpgradeViewData data)
         {
+            var costText = data.IsMaxed ? "Max" : $"{data.NextCost}g";
             return track switch
             {
-                UpgradeTrack.AttackPower => $"{GetUpgradeLabel(track)} +{data.AttackPowerBonus} ({data.NextCost}g)",
-                UpgradeTrack.MaxHealth => $"{GetUpgradeLabel(track)} +{data.MaxHealthBonus} ({data.NextCost}g)",
-                UpgradeTrack.Defense => $"{GetUpgradeLabel(track)} -{data.FlatDamageReduction} dmg ({data.NextCost}g)",
-                UpgradeTrack.AttackSpeed => $"{GetUpgradeLabel(track)} +{data.AttackSpeedBonus:0.00}/s ({data.NextCost}g)",
-                UpgradeTrack.GoldGain => $"{GetUpgradeLabel(track)} +{Mathf.RoundToInt((data.GoldGainMultiplier - 1f) * 100f)}% ({data.NextCost}g)",
-                UpgradeTrack.HealthRegen => $"{GetUpgradeLabel(track)} +{data.HealthRegenPerSecond:0.0}/s ({data.NextCost}g)",
-                _ => $"{GetUpgradeLabel(track)} Lv.{data.Level} ({data.NextCost}g)",
+                UpgradeTrack.AttackPower => $"{GetUpgradeLabel(track)} +{data.AttackPowerBonus} ({costText})",
+                UpgradeTrack.MaxHealth => $"{GetUpgradeLabel(track)} +{data.MaxHealthBonus} ({costText})",
+                UpgradeTrack.Defense => $"{GetUpgradeLabel(track)} -{data.FlatDamageReduction} dmg ({costText})",
+                UpgradeTrack.Armor => $"{GetUpgradeLabel(track)} {Mathf.RoundToInt(data.ArmorPercent * 100f)}% ({costText})",
+                UpgradeTrack.AttackSpeed => $"{GetUpgradeLabel(track)} +{data.AttackSpeedBonus:0.00}/s ({costText})",
+                UpgradeTrack.GoldGain => $"{GetUpgradeLabel(track)} +{Mathf.RoundToInt((data.GoldGainMultiplier - 1f) * 100f)}% ({costText})",
+                UpgradeTrack.HealthRegen => $"{GetUpgradeLabel(track)} +{data.HealthRegenPerSecond:0.0}/s ({costText})",
+                _ => $"{GetUpgradeLabel(track)} Lv.{data.Level} ({costText})",
             };
         }
 
@@ -1393,6 +1422,11 @@ namespace IdleGame
                 defenseButtonText = GetButtonLabel(defenseButton);
             }
 
+            if (armorButtonText == null && armorButton != null)
+            {
+                armorButtonText = GetButtonLabel(armorButton);
+            }
+
             if (attackSpeedButtonText == null && attackSpeedButton != null)
             {
                 attackSpeedButtonText = GetButtonLabel(attackSpeedButton);
@@ -1416,6 +1450,11 @@ namespace IdleGame
                 return healthParent;
             }
 
+            if (armorButton != null && armorButton.transform.parent is RectTransform armorParent)
+            {
+                return armorParent;
+            }
+
             if (playerStatsText != null && playerStatsText.rectTransform.parent is RectTransform statsParent)
             {
                 return statsParent;
@@ -1435,6 +1474,7 @@ namespace IdleGame
                 && maxHealthButton != null
                 && healthRegenButton != null
                 && defenseButton != null
+                && armorButton != null
                 && attackSpeedButton != null
                 && goldGainButton != null;
         }
@@ -1472,6 +1512,7 @@ namespace IdleGame
                 || maxHealthButton != null
                 || healthRegenButton != null
                 || defenseButton != null
+                || armorButton != null
                 || attackSpeedButton != null
                 || goldGainButton != null;
         }
