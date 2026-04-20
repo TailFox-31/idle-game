@@ -147,11 +147,11 @@ namespace IdleGame
         private static readonly BossFamilyProfile DefaultBossProfile = new("Enemy", "Elite", 2.8f, 1.55f, 1.1f, 0, 0f, 4f, 1f, 1f, CombatMechanicDefinition.None);
         private static readonly BossFamilyProfile[] DefaultBossProfiles =
         {
-            new("Slime", "Crown", 2.55f, 1.2f, 0.96f, 0, 0f, 4f, 0.95f, 1f, new CombatMechanicDefinition(CombatMechanicType.GuardRecovery, "Jelly guard", 4f, 2.4f, damageTakenMultiplier: 0.4f, recoveryPercentPerSecond: 0.07f)),
-            new("Boar", "Heavy", 2.9f, 1.8f, 0.68f, 1, 0.2f, 4.4f, 1.05f, 1.35f, new CombatMechanicDefinition(CombatMechanicType.WindUpBurst, "Crushing slam", 2.4f, 3.2f, attackPowerMultiplier: 2.6f, damageTakenMultiplier: 1.75f)),
-            new("Wisp", "Stormbound", 1.95f, 1f, 1.7f, 0, 0f, 4.7f, 0.75f, 0.35f, new CombatMechanicDefinition(CombatMechanicType.EnrageThreshold, "Storm surge", 0f, 0f, attackPowerMultiplier: 1.4f, attackSpeedMultiplier: 2.1f, thresholdHealthRatio: 0.55f, triggerMode: CombatMechanicTriggerMode.Threshold)),
-            new("Bandit", "Cutthroat", 2.15f, 1.35f, 1.55f, 0, 0.15f, 5.2f, 0.65f, 0.5f, new CombatMechanicDefinition(CombatMechanicType.FrenzyWindow, "Flurry", 3.8f, 1.7f, attackPowerMultiplier: 0.95f, attackSpeedMultiplier: 2.6f)),
-            new("Golem", "Spined", 3.45f, 1.15f, 0.62f, 3, 1.1f, 5.7f, 1.15f, 1.45f, new CombatMechanicDefinition(CombatMechanicType.ReflectWindow, "Granite spikes", 4.6f, 2.2f, damageTakenMultiplier: 0.6f, retaliationDamageMultiplier: 0.85f, retaliationFlatDamage: 1)),
+            new("Slime", "Crown", 2.55f, 1.2f, 1.2142857f, 0, 0f, 4f, 0.95f, 1f, new CombatMechanicDefinition(CombatMechanicType.GuardRecovery, "Jelly guard", 4f, 2.4f, damageTakenMultiplier: 0.4f, recoveryPercentPerSecond: 0.07f)),
+            new("Boar", "Heavy", 2.9f, 1.8f, 1.2f, 1, 0.2f, 4.4f, 1.05f, 1.35f, new CombatMechanicDefinition(CombatMechanicType.WindUpBurst, "Crushing slam", 2.4f, 3.2f, attackPowerMultiplier: 2.6f, damageTakenMultiplier: 1.75f)),
+            new("Wisp", "Stormbound", 1.95f, 1f, 1.3333334f, 0, 0f, 4.7f, 0.75f, 0.35f, new CombatMechanicDefinition(CombatMechanicType.EnrageThreshold, "Storm surge", 0f, 0f, attackPowerMultiplier: 1.4f, attackSpeedMultiplier: 2.1f, thresholdHealthRatio: 0.55f, triggerMode: CombatMechanicTriggerMode.Threshold)),
+            new("Bandit", "Cutthroat", 2.15f, 1.35f, 1.3333334f, 0, 0.15f, 5.2f, 0.65f, 0.5f, new CombatMechanicDefinition(CombatMechanicType.FrenzyWindow, "Flurry", 3.8f, 1.7f, attackPowerMultiplier: 0.95f, attackSpeedMultiplier: 2.6f)),
+            new("Golem", "Spined", 3.45f, 1.15f, 1.1111112f, 3, 1.1f, 5.7f, 1.15f, 1.45f, new CombatMechanicDefinition(CombatMechanicType.ReflectWindow, "Granite spikes", 4.6f, 2.2f, damageTakenMultiplier: 0.6f, retaliationDamageMultiplier: 0.85f, retaliationFlatDamage: 1)),
         };
 
         [SerializeField]
@@ -291,11 +291,11 @@ namespace IdleGame
         {
             return new List<EnemyArchetypeStage>
             {
-                new EnemyArchetypeStage(FirstWave, enemyId, 1f, 1f, 1f, 1f, 0, 0f, 1f, 0.95f),
-                new EnemyArchetypeStage(11, "Boar", 1.55f, 1.45f, 0.72f, 1.18f, 1, 0.15f, 1.08f, 1.3f),
-                new EnemyArchetypeStage(21, "Wisp", 0.78f, 0.78f, 1.85f, 1.22f, 0, 0f, 0.82f, 0.42f),
-                new EnemyArchetypeStage(31, "Bandit", 0.95f, 1.08f, 1.45f, 1.58f, 0, 0.1f, 0.68f, 0.5f),
-                new EnemyArchetypeStage(41, "Golem", 2.15f, 0.95f, 0.55f, 1.9f, 2, 0.75f, 1.15f, 1.4f),
+                new EnemyArchetypeStage(FirstWave, enemyId, 1f, 1f, 1.4f, 1f, 0, 0f, 1f, 0.95f),
+                new EnemyArchetypeStage(11, "Boar", 1.55f, 1.45f, 1f, 1.18f, 1, 0.15f, 1.08f, 1.3f),
+                new EnemyArchetypeStage(21, "Wisp", 0.78f, 0.78f, 2.4f, 1.22f, 0, 0f, 0.82f, 0.42f),
+                new EnemyArchetypeStage(31, "Bandit", 0.95f, 1.08f, 2.1f, 1.58f, 0, 0.1f, 0.68f, 0.5f),
+                new EnemyArchetypeStage(41, "Golem", 2.15f, 0.95f, 0.9f, 1.9f, 2, 0.75f, 1.15f, 1.4f),
             };
         }
 
