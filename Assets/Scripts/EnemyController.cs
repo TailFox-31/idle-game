@@ -174,9 +174,6 @@ namespace IdleGame
         private float attackMultiplierPerWave = 0.10f;
 
         [SerializeField, Min(0f)]
-        private float attackSpeedPerWave = 0.02f;
-
-        [SerializeField, Min(0f)]
         private float goldMultiplierPerWave = 0.18f;
 
         [Header("Archetype Progression")]
@@ -197,7 +194,7 @@ namespace IdleGame
             var scaledBaseStats = new CombatantStats(
                 ScaleInt(baseStats.MaxHealth, healthMultiplierPerWave, waveOffset),
                 ScaleInt(baseStats.AttackPower, attackMultiplierPerWave, waveOffset),
-                ScaleAttackSpeed(baseStats.AttacksPerSecond, waveOffset));
+                ScaleAttackSpeed(baseStats.AttacksPerSecond));
             var archetype = GetArchetypeForWave(archetypeWave);
             var shapedStats = scaledBaseStats.Multiply(
                 archetype.HealthMultiplier,
@@ -386,10 +383,9 @@ namespace IdleGame
             return DefaultBossProfile;
         }
 
-        private float ScaleAttackSpeed(float baseAttackSpeed, int waveOffset)
+        private static float ScaleAttackSpeed(float baseAttackSpeed)
         {
-            var scaledValue = baseAttackSpeed + (attackSpeedPerWave * Mathf.Max(0, waveOffset));
-            return Mathf.Max(0.1f, scaledValue);
+            return Mathf.Max(0.1f, baseAttackSpeed);
         }
     }
 }
