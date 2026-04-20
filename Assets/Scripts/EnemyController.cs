@@ -141,7 +141,7 @@ namespace IdleGame
 
         private const int FirstWave = 1;
         private const int BossWaveInterval = 10;
-        private const int DefaultFamilyCycleWaveLength = 50;
+        private const int DefaultFamilyCycleWaveLength = 100;
         private const float MaxNormalAttacksPerSecond = 8f;
         private const float MaxBossAttacksPerSecond = 3.5f;
         private static readonly BossFamilyProfile DefaultBossProfile = new("Enemy", "Elite", 2.8f, 1.55f, 1.1f, 0, 0f, 4f, 1f, 1f, CombatMechanicDefinition.None);
@@ -152,6 +152,11 @@ namespace IdleGame
             new("Wisp", "Stormbound", 1.95f, 1f, 1.3333334f, 0, 0f, 4.7f, 0.75f, 0.35f, new CombatMechanicDefinition(CombatMechanicType.EnrageThreshold, "Storm surge", 0f, 0f, attackPowerMultiplier: 1.4f, attackSpeedMultiplier: 2.1f, thresholdHealthRatio: 0.55f, triggerMode: CombatMechanicTriggerMode.Threshold)),
             new("Bandit", "Cutthroat", 2.15f, 1.35f, 1.3333334f, 0, 0.15f, 5.2f, 0.65f, 0.5f, new CombatMechanicDefinition(CombatMechanicType.FrenzyWindow, "Flurry", 3.8f, 1.7f, attackPowerMultiplier: 0.95f, attackSpeedMultiplier: 2.6f)),
             new("Golem", "Spined", 3.45f, 1.15f, 1.1111112f, 3, 1.1f, 5.7f, 1.15f, 1.45f, new CombatMechanicDefinition(CombatMechanicType.ReflectWindow, "Granite spikes", 4.6f, 2.2f, damageTakenMultiplier: 0.6f, retaliationDamageMultiplier: 0.85f, retaliationFlatDamage: 1)),
+            new("Ghost", "Phasing", 2.25f, 1.05f, 1.1428572f, 0, 0f, 5.1f, 0.7f, 0.35f, new CombatMechanicDefinition(CombatMechanicType.EnrageThreshold, "Haunting rush", 0f, 0f, attackPowerMultiplier: 1.25f, attackSpeedMultiplier: 1.9f, thresholdHealthRatio: 0.5f, triggerMode: CombatMechanicTriggerMode.Threshold)),
+            new("Knight", "Bulwark", 3.2f, 1.1f, 1.0666667f, 5, 0.5f, 5.4f, 1.2f, 1.5f, new CombatMechanicDefinition(CombatMechanicType.GuardRecovery, "Shield wall", 5f, 2.6f, damageTakenMultiplier: 0.45f, recoveryPercentPerSecond: 0.035f)),
+            new("Shaman", "Restoring", 2.55f, 1.05f, 1.0909091f, 1, 3.4f, 5.8f, 1.05f, 1.1f, new CombatMechanicDefinition(CombatMechanicType.GuardRecovery, "Spirit mend", 4.2f, 2.8f, damageTakenMultiplier: 0.7f, recoveryPercentPerSecond: 0.085f)),
+            new("Assassin", "Nightblade", 2.1f, 1.35f, 1.1666667f, 0, 0.1f, 6.2f, 0.62f, 0.35f, new CombatMechanicDefinition(CombatMechanicType.WindUpBurst, "Killing stroke", 2.8f, 2f, attackPowerMultiplier: 3.1f, damageTakenMultiplier: 1.9f)),
+            new("Drake", "Ashen", 3.65f, 1.55f, 1.1666667f, 3, 1.2f, 6.8f, 1.1f, 1.2f, new CombatMechanicDefinition(CombatMechanicType.FrenzyWindow, "Ashen rage", 4.5f, 2.4f, attackPowerMultiplier: 1.25f, attackSpeedMultiplier: 1.7f)),
         };
 
         [SerializeField]
@@ -296,6 +301,11 @@ namespace IdleGame
                 new EnemyArchetypeStage(21, "Wisp", 0.78f, 0.78f, 2.4f, 1.22f, 0, 0f, 0.82f, 0.42f),
                 new EnemyArchetypeStage(31, "Bandit", 0.95f, 1.08f, 2.1f, 1.58f, 0, 0.1f, 0.68f, 0.5f),
                 new EnemyArchetypeStage(41, "Golem", 2.15f, 0.95f, 0.9f, 1.9f, 2, 0.75f, 1.15f, 1.4f),
+                new EnemyArchetypeStage(51, "Ghost", 0.35f, 0.9f, 2.8f, 1.72f, 0, 0f, 0.72f, 0.3f),
+                new EnemyArchetypeStage(61, "Knight", 1.8f, 1.05f, 0.75f, 2.05f, 4, 0.25f, 1.18f, 1.55f),
+                new EnemyArchetypeStage(71, "Shaman", 1.2f, 1.15f, 1.1f, 2.2f, 1, 2.5f, 1f, 0.95f),
+                new EnemyArchetypeStage(81, "Assassin", 0.55f, 2f, 1.8f, 2.45f, 0, 0f, 0.6f, 0.35f),
+                new EnemyArchetypeStage(91, "Drake", 2.4f, 1.8f, 1.2f, 2.8f, 2, 0.5f, 1.08f, 1.15f),
             };
         }
 
