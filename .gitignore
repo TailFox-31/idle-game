@@ -19,6 +19,7 @@
 *.csproj
 *.unityproj
 *.sln
+*.slnx
 *.suo
 *.tmp
 *.user
@@ -35,4 +36,3 @@
 .DS_Store
 Thumbs.db
 desktop.ini
-
