@@ -141,8 +141,9 @@ namespace IdleGame
 
         private const int FirstWave = 1;
         private const int BossWaveInterval = 10;
+        private const int DefaultFamilyCycleWaveLength = 50;
         private const float MaxNormalAttacksPerSecond = 8f;
-        private const float MaxBossAttacksPerSecond = 6f;
+        private const float MaxBossAttacksPerSecond = 3.5f;
         private static readonly BossFamilyProfile DefaultBossProfile = new("Enemy", "Elite", 2.8f, 1.55f, 1.1f, 0, 0f, 4f, 1f, 1f, CombatMechanicDefinition.None);
         private static readonly BossFamilyProfile[] DefaultBossProfiles =
         {
@@ -192,7 +193,7 @@ namespace IdleGame
             var normalizedWave = Mathf.Max(FirstWave, wave);
             var waveOffset = normalizedWave - FirstWave;
             var isBossWave = IsBossWave(normalizedWave);
-            var archetypeWave = isBossWave ? normalizedWave - 1 : normalizedWave;
+            var archetypeWave = ResolveRepeatingFamilyWave(isBossWave ? normalizedWave - 1 : normalizedWave);
             var scaledBaseStats = new CombatantStats(
                 ScaleInt(baseStats.MaxHealth, healthMultiplierPerWave, waveOffset),
                 ScaleInt(baseStats.AttackPower, attackMultiplierPerWave, waveOffset),
@@ -342,6 +343,13 @@ namespace IdleGame
         private static bool IsBossWave(int wave)
         {
             return wave >= BossWaveInterval && wave % BossWaveInterval == 0;
+        }
+
+        private static int ResolveRepeatingFamilyWave(int wave)
+        {
+            var normalizedWave = Mathf.Max(FirstWave, wave);
+            var cycleOffset = (normalizedWave - FirstWave) % DefaultFamilyCycleWaveLength;
+            return FirstWave + cycleOffset;
         }
 
         private static CombatantStats ClampEnemyAttackSpeed(CombatantStats stats, bool isBoss)
