@@ -679,15 +679,11 @@ namespace IdleGame
                 return 0;
             }
 
-            var normalizedDamage = Mathf.Max(0, incomingDamage);
-            if (normalizedDamage <= 0)
-            {
-                return 0;
-            }
-
-            var afterFlat = Mathf.Max(1, normalizedDamage - enemy.Stats.FlatDamageReduction);
-            var finalDamage = Mathf.Max(1, Mathf.RoundToInt(afterFlat * (1f - enemySpawnData.ArmorPercent)));
-            return enemy.ReceiveDamage(finalDamage + enemy.Stats.FlatDamageReduction);
+            var appliedDamage = CombatDamage.CalculateAppliedDamage(
+                incomingDamage,
+                enemy.Stats.FlatDamageReduction,
+                enemySpawnData.ArmorPercent);
+            return enemy.ReceiveAppliedDamage(appliedDamage);
         }
 
         private static int GetAppliedDamage(CombatantRuntime target, int incomingDamage)
@@ -697,10 +693,7 @@ namespace IdleGame
                 return 0;
             }
 
-            var normalizedDamage = Mathf.Max(0, incomingDamage);
-            return normalizedDamage <= 0
-                ? 0
-                : Mathf.Max(1, normalizedDamage - target.Stats.FlatDamageReduction);
+            return CombatDamage.CalculateAppliedDamage(incomingDamage, target.Stats.FlatDamageReduction);
         }
 
         private void PublishState()

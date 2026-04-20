@@ -3,6 +3,21 @@ using UnityEngine;
 
 namespace IdleGame
 {
+    public static class CombatDamage
+    {
+        public static int CalculateAppliedDamage(int incomingDamage, int flatDamageReduction, float armorPercent = 0f)
+        {
+            var normalizedDamage = Mathf.Max(0, incomingDamage);
+            if (normalizedDamage <= 0)
+            {
+                return 0;
+            }
+
+            var afterFlat = Mathf.Max(1, normalizedDamage - Mathf.Max(0, flatDamageReduction));
+            return Mathf.Max(1, Mathf.RoundToInt(afterFlat * (1f - Mathf.Clamp01(armorPercent))));
+        }
+    }
+
     [Serializable]
     public struct CombatantStats
     {
@@ -177,12 +192,19 @@ namespace IdleGame
                 return 0;
             }
 
-            var incomingDamage = Mathf.Max(0, damage);
-            var appliedDamage = incomingDamage <= 0
-                ? 0
-                : Mathf.Max(1, incomingDamage - Stats.FlatDamageReduction);
-            CurrentHealth = Mathf.Max(0, CurrentHealth - appliedDamage);
-            return appliedDamage;
+            return ReceiveAppliedDamage(CombatDamage.CalculateAppliedDamage(damage, Stats.FlatDamageReduction));
+        }
+
+        public int ReceiveAppliedDamage(int appliedDamage)
+        {
+            if (!IsAlive)
+            {
+                return 0;
+            }
+
+            var normalizedDamage = Mathf.Max(0, appliedDamage);
+            CurrentHealth = Mathf.Max(0, CurrentHealth - normalizedDamage);
+            return normalizedDamage;
         }
 
         public bool RecoverHealth(int amount)
