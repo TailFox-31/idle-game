@@ -328,7 +328,12 @@ namespace IdleGame
                 var playerReadout = snapshot.Battle.PlayerAlive
                     ? $"HP {snapshot.Battle.PlayerHealth}/{snapshot.Battle.PlayerMaxHealth} | ATK {snapshot.PlayerStats.AttackPower} | SPD {snapshot.PlayerStats.AttacksPerSecond:0.00} | DEF {snapshot.PlayerStats.FlatDamageReduction} | Armor {armorPercent}% | REG {regenPerSecond:0.0}/s | M+{snapshot.MilestoneAttackBonus}"
                     : $"HP 0/{snapshot.Battle.PlayerMaxHealth} | Down {snapshot.Battle.PlayerRespawnRemaining:0.0}s | ATK {snapshot.PlayerStats.AttackPower} | DEF {snapshot.PlayerStats.FlatDamageReduction} | Armor {armorPercent}% | REG {regenPerSecond:0.0}/s";
-                if (!string.IsNullOrWhiteSpace(snapshot.Battle.PlayerStateLabel))
+                var playerStatusLine = BuildStatusSummary(snapshot.Battle.PlayerStatuses);
+                if (!string.IsNullOrWhiteSpace(playerStatusLine))
+                {
+                    playerReadout = $"{playerReadout}\n<color=#8FD694>{playerStatusLine}</color>";
+                }
+                else if (!string.IsNullOrWhiteSpace(snapshot.Battle.PlayerStateLabel))
                 {
                     playerReadout = $"{playerReadout}\n<color=#8FD694>{snapshot.Battle.PlayerStateLabel}</color>";
                 }
@@ -1343,13 +1348,41 @@ namespace IdleGame
                 ? $" | Armor {Mathf.RoundToInt(battle.EnemyArmorPercent * 100f)}%"
                 : string.Empty;
             var statsLine = $"{healthOrRespawn} | ATK {battle.EnemyAttackPower} | SPD {battle.EnemyAttacksPerSecond:0.00}{armorText} | G {battle.EnemyGoldReward}";
+            var enemyStatusLine = BuildStatusSummary(battle.EnemyStatuses);
 
-            if (string.IsNullOrWhiteSpace(battle.EnemyStateLabel) || !battle.EnemyAlive)
+            if ((string.IsNullOrWhiteSpace(enemyStatusLine) && string.IsNullOrWhiteSpace(battle.EnemyStateLabel)) || !battle.EnemyAlive)
             {
                 return $"{lineOne}\n{statsLine}";
             }
 
-            return $"{lineOne}\n<color=#F4D35E>{battle.EnemyStateLabel}</color> | {statsLine}";
+            var displayedEnemyState = !string.IsNullOrWhiteSpace(enemyStatusLine)
+                ? enemyStatusLine
+                : battle.EnemyStateLabel;
+            return $"{lineOne}\n<color=#F4D35E>{displayedEnemyState}</color> | {statsLine}";
+        }
+
+        private static string BuildStatusSummary(IReadOnlyList<CombatRuntimeStatus> statuses)
+        {
+            if (statuses == null || statuses.Count == 0)
+            {
+                return string.Empty;
+            }
+
+            var summary = string.Empty;
+            for (var i = 0; i < statuses.Count; i++)
+            {
+                var statusText = statuses[i].StatusText;
+                if (string.IsNullOrWhiteSpace(statusText))
+                {
+                    continue;
+                }
+
+                summary = string.IsNullOrWhiteSpace(summary)
+                    ? statusText
+                    : $"{summary} | {statusText}";
+            }
+
+            return summary;
         }
 
         private static string GetUpgradeLabel(UpgradeTrack track)
