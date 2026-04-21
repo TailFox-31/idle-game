@@ -59,6 +59,62 @@ namespace IdleGame
         public string StatusText { get; }
     }
 
+    public enum BattleCombatantSide
+    {
+        None = 0,
+        Player = 1,
+        Enemy = 2,
+    }
+
+    public enum BattleFlowHookPoint
+    {
+        TickStarted = 0,
+        BeforePlayerAttackResolved = 1,
+        AfterPlayerAttackResolved = 2,
+        BeforeEnemyAttackResolved = 3,
+        AfterEnemyAttackResolved = 4,
+        PlayerDefeated = 5,
+        EnemyDefeated = 6,
+        PlayerRespawned = 7,
+        EnemyRespawned = 8,
+        TickCompleted = 9,
+    }
+
+    public readonly struct BattleFlowContext
+    {
+        public BattleFlowContext(
+            BattleFlowHookPoint hookPoint,
+            int wave,
+            float deltaTime,
+            BattleCombatantSide actor,
+            BattleCombatantSide target,
+            int attemptedDamage,
+            int appliedDamage)
+        {
+            HookPoint = hookPoint;
+            Wave = Mathf.Max(0, wave);
+            DeltaTime = Mathf.Max(0f, deltaTime);
+            Actor = actor;
+            Target = target;
+            AttemptedDamage = Mathf.Max(0, attemptedDamage);
+            AppliedDamage = Mathf.Max(0, appliedDamage);
+        }
+
+        public BattleFlowHookPoint HookPoint { get; }
+
+        public int Wave { get; }
+
+        public float DeltaTime { get; }
+
+        public BattleCombatantSide Actor { get; }
+
+        public BattleCombatantSide Target { get; }
+
+        public int AttemptedDamage { get; }
+
+        public int AppliedDamage { get; }
+    }
+
     public readonly struct BattleSnapshot
     {
         public BattleSnapshot(
@@ -83,6 +139,57 @@ namespace IdleGame
             string enemyStateLabel,
             bool enemyAlive,
             float enemyRespawnRemaining)
+            : this(
+                wave,
+                enemyId,
+                playerHealth,
+                playerMaxHealth,
+                playerAlive,
+                playerRespawnRemaining,
+                playerStateLabel,
+                Array.Empty<CombatRuntimeStatus>(),
+                guardSkill,
+                lastStandSkill,
+                burstSkill,
+                frenzySkill,
+                enemyHealth,
+                enemyMaxHealth,
+                enemyAttackPower,
+                enemyAttacksPerSecond,
+                enemyGoldReward,
+                enemyArmorPercent,
+                enemyBehaviorLabel,
+                enemyStateLabel,
+                Array.Empty<CombatRuntimeStatus>(),
+                enemyAlive,
+                enemyRespawnRemaining)
+        {
+        }
+
+        public BattleSnapshot(
+            int wave,
+            string enemyId,
+            int playerHealth,
+            int playerMaxHealth,
+            bool playerAlive,
+            float playerRespawnRemaining,
+            string playerStateLabel,
+            CombatRuntimeStatus[] playerStatuses,
+            SkillSnapshot guardSkill,
+            SkillSnapshot lastStandSkill,
+            SkillSnapshot burstSkill,
+            SkillSnapshot frenzySkill,
+            int enemyHealth,
+            int enemyMaxHealth,
+            int enemyAttackPower,
+            float enemyAttacksPerSecond,
+            int enemyGoldReward,
+            float enemyArmorPercent,
+            string enemyBehaviorLabel,
+            string enemyStateLabel,
+            CombatRuntimeStatus[] enemyStatuses,
+            bool enemyAlive,
+            float enemyRespawnRemaining)
         {
             Wave = wave;
             EnemyId = enemyId;
@@ -91,6 +198,7 @@ namespace IdleGame
             PlayerAlive = playerAlive;
             PlayerRespawnRemaining = playerRespawnRemaining;
             PlayerStateLabel = string.IsNullOrWhiteSpace(playerStateLabel) ? string.Empty : playerStateLabel.Trim();
+            PlayerStatuses = playerStatuses ?? Array.Empty<CombatRuntimeStatus>();
             GuardSkill = guardSkill;
             LastStandSkill = lastStandSkill;
             BurstSkill = burstSkill;
@@ -103,6 +211,7 @@ namespace IdleGame
             EnemyArmorPercent = Mathf.Clamp01(enemyArmorPercent);
             EnemyBehaviorLabel = string.IsNullOrWhiteSpace(enemyBehaviorLabel) ? string.Empty : enemyBehaviorLabel.Trim();
             EnemyStateLabel = string.IsNullOrWhiteSpace(enemyStateLabel) ? string.Empty : enemyStateLabel.Trim();
+            EnemyStatuses = enemyStatuses ?? Array.Empty<CombatRuntimeStatus>();
             EnemyAlive = enemyAlive;
             EnemyRespawnRemaining = enemyRespawnRemaining;
         }
@@ -122,6 +231,8 @@ namespace IdleGame
         public float PlayerRespawnRemaining { get; }
 
         public string PlayerStateLabel { get; }
+
+        public CombatRuntimeStatus[] PlayerStatuses { get; }
 
         public SkillSnapshot GuardSkill { get; }
 
@@ -146,6 +257,8 @@ namespace IdleGame
         public string EnemyBehaviorLabel { get; }
 
         public string EnemyStateLabel { get; }
+
+        public CombatRuntimeStatus[] EnemyStatuses { get; }
 
         public bool EnemyAlive { get; }
 
@@ -197,6 +310,8 @@ namespace IdleGame
         }
 
         public event Action<BattleSnapshot> BattleStateChanged;
+
+        public event Action<BattleFlowContext> BattleFlowReached;
 
         public event Action<int> GoldAwarded;
 
@@ -323,6 +438,7 @@ namespace IdleGame
                 return;
             }
 
+            NotifyBattleFlow(BattleFlowHookPoint.TickStarted, deltaTime);
             var changed = false;
             if (!player.IsAlive)
             {
@@ -341,6 +457,7 @@ namespace IdleGame
                     enemyCombatMechanic.Reset(enemySpawnData.BossMechanic, enemySpawnData.Stats.MaxHealth);
                     enemyRespawnRemaining = 0f;
                     ResetPlayerRuntimeState();
+                    NotifyBattleFlow(BattleFlowHookPoint.PlayerRespawned, deltaTime);
                     changed = true;
                 }
             }
@@ -359,6 +476,7 @@ namespace IdleGame
                     enemy.Reset(enemySpawnData.Stats, enemySpawnData.OpeningAttackDelay);
                     enemyCombatMechanic.Reset(enemySpawnData.BossMechanic, enemySpawnData.Stats.MaxHealth);
                     ResetPlayerRuntimeState();
+                    NotifyBattleFlow(BattleFlowHookPoint.EnemyRespawned, deltaTime);
                     changed = true;
                 }
             }
@@ -378,6 +496,7 @@ namespace IdleGame
                 var enemyAttacks = enemyCombatMechanic.CanAttack && enemy.TryAttack(deltaTime, enemyCombatMechanic.GetAttackSpeedMultiplier());
                 if (!playerAttacks && !enemyAttacks)
                 {
+                    NotifyBattleFlow(BattleFlowHookPoint.TickCompleted, deltaTime);
                     if (changed)
                     {
                         PublishState();
@@ -390,22 +509,37 @@ namespace IdleGame
                 {
                     var burstPlayerDamage = playerBurstMechanic.ModifyOutgoingDamage(player.Stats.AttackPower);
                     var outgoingPlayerDamage = enemyCombatMechanic.ModifyIncomingDamage(burstPlayerDamage);
+                    NotifyBattleFlow(
+                        BattleFlowHookPoint.BeforePlayerAttackResolved,
+                        deltaTime,
+                        BattleCombatantSide.Player,
+                        BattleCombatantSide.Enemy,
+                        outgoingPlayerDamage);
                     var appliedDamage = ApplyIncomingDamage(enemy, outgoingPlayerDamage);
                     changed |= playerBurstMechanic.NotifyAttackResolved();
                     var hitReaction = enemyCombatMechanic.NotifyIncomingHitResolved(appliedDamage, enemy, player, ApplyIncomingDamageToPlayer);
                     changed |= hitReaction.StateChanged;
+                    NotifyBattleFlow(
+                        BattleFlowHookPoint.AfterPlayerAttackResolved,
+                        deltaTime,
+                        BattleCombatantSide.Player,
+                        BattleCombatantSide.Enemy,
+                        outgoingPlayerDamage,
+                        appliedDamage);
                     changed = true;
 
                     if (hitReaction.RetaliationDamage > 0 && !player.IsAlive)
                     {
                         playerRespawnRemaining = playerRespawnDelay;
                         ResetPlayerRuntimeState();
+                        NotifyBattleFlow(BattleFlowHookPoint.PlayerDefeated, deltaTime, BattleCombatantSide.Enemy, BattleCombatantSide.Player, hitReaction.RetaliationDamage, hitReaction.RetaliationDamage);
                     }
 
                     if (!enemy.IsAlive)
                     {
                         enemyRespawnRemaining = enemySpawnData.RespawnDelay;
                         ResetPlayerRuntimeState();
+                        NotifyBattleFlow(BattleFlowHookPoint.EnemyDefeated, deltaTime, BattleCombatantSide.Player, BattleCombatantSide.Enemy, outgoingPlayerDamage, appliedDamage);
                         GoldAwarded?.Invoke(enemySpawnData.GoldReward);
                         EnemyDefeated?.Invoke(enemySpawnData);
                     }
@@ -414,18 +548,33 @@ namespace IdleGame
                 if (enemyAttacks && enemy.IsAlive && player.IsAlive)
                 {
                     var outgoingEnemyDamage = enemyCombatMechanic.ModifyOutgoingDamage(enemy.Stats.AttackPower);
-                    ApplyIncomingDamageToPlayer(outgoingEnemyDamage);
+                    NotifyBattleFlow(
+                        BattleFlowHookPoint.BeforeEnemyAttackResolved,
+                        deltaTime,
+                        BattleCombatantSide.Enemy,
+                        BattleCombatantSide.Player,
+                        outgoingEnemyDamage);
+                    var appliedDamage = ApplyIncomingDamageToPlayer(outgoingEnemyDamage);
                     changed |= enemyCombatMechanic.NotifyAttackResolved();
+                    NotifyBattleFlow(
+                        BattleFlowHookPoint.AfterEnemyAttackResolved,
+                        deltaTime,
+                        BattleCombatantSide.Enemy,
+                        BattleCombatantSide.Player,
+                        outgoingEnemyDamage,
+                        appliedDamage);
                     changed = true;
 
                     if (!player.IsAlive)
                     {
                         playerRespawnRemaining = playerRespawnDelay;
                         ResetPlayerRuntimeState();
+                        NotifyBattleFlow(BattleFlowHookPoint.PlayerDefeated, deltaTime, BattleCombatantSide.Enemy, BattleCombatantSide.Player, outgoingEnemyDamage, appliedDamage);
                     }
                 }
             }
 
+            NotifyBattleFlow(BattleFlowHookPoint.TickCompleted, deltaTime);
             if (changed)
             {
                 PublishState();
@@ -437,6 +586,8 @@ namespace IdleGame
             var displayedEnemy = !enemy.IsAlive && hasQueuedEnemy
                 ? queuedEnemySpawnData
                 : enemySpawnData;
+            var playerStatuses = BuildPlayerStatuses();
+            var enemyStatuses = BuildEnemyStatuses();
 
             return new BattleSnapshot(
                 displayedEnemy.Wave,
@@ -445,7 +596,8 @@ namespace IdleGame
                 player.Stats.MaxHealth,
                 player.IsAlive,
                 playerRespawnRemaining,
-                BuildPlayerStateLabel(),
+                FormatStatusLabel(playerStatuses),
+                playerStatuses,
                 BuildGuardSnapshot(),
                 BuildLastStandSnapshot(),
                 BuildBurstSnapshot(),
@@ -457,7 +609,8 @@ namespace IdleGame
                 displayedEnemy.GoldReward,
                 displayedEnemy.Stats.ArmorPercent,
                 displayedEnemy.BehaviorLabel,
-                enemy.IsAlive ? enemyCombatMechanic.StateText : string.Empty,
+                FormatStatusLabel(enemyStatuses),
+                enemyStatuses,
                 enemy.IsAlive,
                 enemyRespawnRemaining);
         }
@@ -614,43 +767,85 @@ namespace IdleGame
                 statusText);
         }
 
-        private string BuildPlayerStateLabel()
+        private CombatRuntimeStatus[] BuildPlayerStatuses()
         {
             if (!player.IsAlive)
+            {
+                return Array.Empty<CombatRuntimeStatus>();
+            }
+
+            var statuses = new System.Collections.Generic.List<CombatRuntimeStatus>(4);
+            TryAddMechanicStatus(statuses, "player.guard", playerGuardMechanic, true);
+            TryAddMechanicStatus(statuses, "player.last-stand", playerLastStandMechanic, true);
+            TryAddMechanicStatus(statuses, "player.burst", playerBurstMechanic, true);
+            TryAddMechanicStatus(statuses, "player.frenzy", playerFrenzyMechanic, true);
+            return statuses.Count > 0 ? statuses.ToArray() : Array.Empty<CombatRuntimeStatus>();
+        }
+
+        private CombatRuntimeStatus[] BuildEnemyStatuses()
+        {
+            if (!enemy.IsAlive)
+            {
+                return Array.Empty<CombatRuntimeStatus>();
+            }
+
+            var statuses = new System.Collections.Generic.List<CombatRuntimeStatus>(1);
+            TryAddMechanicStatus(statuses, "enemy.combat-mechanic", enemyCombatMechanic, true);
+            return statuses.Count > 0 ? statuses.ToArray() : Array.Empty<CombatRuntimeStatus>();
+        }
+
+        private static void TryAddMechanicStatus(System.Collections.Generic.List<CombatRuntimeStatus> statuses, string statusId, CombatMechanicRuntime runtime, bool isBeneficial)
+        {
+            if (statuses == null || runtime == null)
+            {
+                return;
+            }
+
+            var statusText = runtime.StateText;
+            if (string.IsNullOrWhiteSpace(statusText))
+            {
+                return;
+            }
+
+            statuses.Add(new CombatRuntimeStatus(
+                statusId,
+                runtime.Definition.DisplayName,
+                GetStatusRemainingDuration(runtime),
+                1,
+                isBeneficial,
+                false,
+                statusText));
+        }
+
+        private static float GetStatusRemainingDuration(CombatMechanicRuntime runtime)
+        {
+            if (runtime == null)
+            {
+                return 0f;
+            }
+
+            return runtime.IsActive ? runtime.ActiveRemaining : 0f;
+        }
+
+        private static string FormatStatusLabel(CombatRuntimeStatus[] statuses)
+        {
+            if (statuses == null || statuses.Length == 0)
             {
                 return string.Empty;
             }
 
-            var guardState = playerGuardMechanic.StateText;
-            var lastStandState = playerLastStandMechanic.StateText;
-            var burstState = playerBurstMechanic.StateText;
-            var frenzyState = playerFrenzyMechanic.StateText;
             var stateLabel = string.Empty;
-
-            if (!string.IsNullOrWhiteSpace(guardState))
+            for (var i = 0; i < statuses.Length; i++)
             {
-                stateLabel = guardState;
-            }
+                var statusText = statuses[i].StatusText;
+                if (string.IsNullOrWhiteSpace(statusText))
+                {
+                    continue;
+                }
 
-            if (!string.IsNullOrWhiteSpace(lastStandState))
-            {
                 stateLabel = string.IsNullOrWhiteSpace(stateLabel)
-                    ? lastStandState
-                    : $"{stateLabel} | {lastStandState}";
-            }
-
-            if (!string.IsNullOrWhiteSpace(burstState))
-            {
-                stateLabel = string.IsNullOrWhiteSpace(stateLabel)
-                    ? burstState
-                    : $"{stateLabel} | {burstState}";
-            }
-
-            if (!string.IsNullOrWhiteSpace(frenzyState))
-            {
-                stateLabel = string.IsNullOrWhiteSpace(stateLabel)
-                    ? frenzyState
-                    : $"{stateLabel} | {frenzyState}";
+                    ? statusText
+                    : $"{stateLabel} | {statusText}";
             }
 
             return stateLabel;
@@ -695,6 +890,24 @@ namespace IdleGame
         private void PublishState()
         {
             BattleStateChanged?.Invoke(BuildSnapshot());
+        }
+
+        private void NotifyBattleFlow(
+            BattleFlowHookPoint hookPoint,
+            float deltaTime,
+            BattleCombatantSide actor = BattleCombatantSide.None,
+            BattleCombatantSide target = BattleCombatantSide.None,
+            int attemptedDamage = 0,
+            int appliedDamage = 0)
+        {
+            BattleFlowReached?.Invoke(new BattleFlowContext(
+                hookPoint,
+                enemySpawnData.Wave,
+                deltaTime,
+                actor,
+                target,
+                attemptedDamage,
+                appliedDamage));
         }
     }
 }
