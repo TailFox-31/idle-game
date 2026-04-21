@@ -15,7 +15,7 @@ namespace IdleGame.EditorTools
         private const string OutputPath = "docs/balance-scenario-export.md";
         private static readonly CultureInfo Culture = CultureInfo.InvariantCulture;
         private static readonly Encoding MarkdownEncoding = new UTF8Encoding(false);
-        private static readonly int[] Waves = { 10, 30, 50, 80, 100, 200, 500, 1000, 2000 };
+        private static readonly int[] Waves = BuildCheckpointWaves();
 
         private static readonly UpgradeModel[] Upgrades =
         {
@@ -75,6 +75,25 @@ namespace IdleGame.EditorTools
             finally
             {
                 UnityEngine.Object.DestroyImmediate(go);
+            }
+        }
+
+        private static int[] BuildCheckpointWaves()
+        {
+            var checkpoints = new SortedSet<int>();
+            AddBossCycle(checkpoints, 10);
+            AddBossCycle(checkpoints, 110);
+            AddBossCycle(checkpoints, 410);
+            AddBossCycle(checkpoints, 910);
+            AddBossCycle(checkpoints, 1910);
+            return checkpoints.ToArray();
+        }
+
+        private static void AddBossCycle(SortedSet<int> checkpoints, int startBossWave)
+        {
+            for (var wave = startBossWave; wave < startBossWave + 100; wave += 10)
+            {
+                checkpoints.Add(wave);
             }
         }
 
@@ -498,6 +517,7 @@ namespace IdleGame.EditorTools
             builder.AppendLine("## Assumptions");
             builder.AppendLine();
             builder.AppendLine("- Scenario upgrade routing is a deterministic proxy from `docs/balance-scenarios.md`; it is not an optimizer.");
+            builder.AppendLine("- Checkpoints include every boss in the first 100-wave family loop (`W10-W100`), then repeat full 100-wave boss cycles ending at `W200`, `W500`, `W1000`, and `W2000` (`W110-W200`, `W410-W500`, `W910-W1000`, `W1910-W2000`).");
             builder.AppendLine("- Gold comes from defeated waves before each checkpoint, including Bounty-modified enemy rewards and milestone rewards.");
             builder.AppendLine("- TTK includes enemy Defense, Armor, regen, and averaged boss damage-taken windows.");
             builder.AppendLine("- TTD includes player Defense, Armor, regen, averaged boss outgoing windows, Guard, and Last Stand estimates.");

@@ -16,6 +16,7 @@ Enemy values are derived from `Assets/Scripts/EnemyController.cs`.
 - Wave 10 and every 10th wave after it is a boss wave.
 - Boss waves use `archetypeWave = wave - 1`, so each block boss uses the preceding family.
 - The 100-wave family table repeats after W100. W101 starts Slime again, and W200/W500/W1000/W2000 are Drake bosses.
+- The Editor-only balance scenario exporter now samples full repeated boss cycles around late anchors so late-wave reports are not Drake-only.
 - Enemy SPD is clamped after shaping: normal enemies max at 8.0 APS, bosses max at 3.5 APS.
 - Defense is flat damage reduction. Armor is percent mitigation stored as a ratio.
 - Shared damage formula: `afterFlat = max(1, incomingDamage - targetDefense)`, then `finalDamage = max(1, RoundToInt(afterFlat * (1 - targetArmor)))`. Incoming damage <= 0 stays 0.
@@ -101,7 +102,7 @@ Effective incoming damage is calculated as `CombatDamage(enemy ATK, player DEF, 
 - High-wave Drake bosses are still dangerous because ATK continues to scale linearly while player HP, DEF, regen, and Armor grow through exponentially priced upgrades.
 - The Armor cap is reached by the even-spend proxy around W1000. After that, player mitigation only improves through flat DEF, which is expensive and weak against W1000+ boss hit sizes.
 - W1000 and W2000 boss fights can become brittle because each hit is a large chunk of player HP. Current baseline incoming DPS looks manageable, but discrete hit damage plus boss Frenzy windows can create sudden deaths.
-- Boss mechanics are unevenly represented in the requested high-wave points because the requested exact waves all resolve to Drake bosses. Golem Reflect is visible at W50 only.
+- Exact-wave snapshots are still Drake-heavy at `W200/W500/W1000/W2000`, but the Editor-only scenario exporter now counters that by sampling full repeated boss cycles around those anchors.
 - Bounty can change real progression substantially, but it competes with direct survival and DPS tracks. This snapshot does not assume optimized bounty-first routing.
 - Regen is modest relative to high-wave boss hit size. It helps between slow hits but does not prevent burst deaths.
 - Effective DPS rows omit enemy regen and boss defensive windows. Actual TTK is worse against Golem Reflect and GuardRecovery bosses than the baseline DPS column suggests.

@@ -27,19 +27,23 @@ Current baseline: use `docs/balance-snapshot.md` as the reference for formulas, 
 
 ## Target Waves
 
-Use these checkpoints unless a later exporter adds a more detailed sweep:
+The current exporter uses explicit boss-cycle checkpoints instead of a mostly Drake-only late-wave sample. It captures:
 
-| Checkpoint | Why it matters |
-|---:|---|
-| W10 | First boss and starter-baseline validation. |
-| W30 | Early speed enemy and EnrageThreshold check. |
-| W50 | Golem ReflectWindow and defensive enemy check. |
-| W80 | Shaman regen and GuardRecovery check. |
-| W100 | First Drake capstone boss. |
-| W200 | Repeated-table midgame check. |
-| W500 | Long-run growth check before Armor cap dominates. |
-| W1000 | Late boss-hit-size check. |
-| W2000 | Extreme high-wave brittleness check. |
+- Every boss in the first family loop: `W10-W100`.
+- A full repeated boss cycle ending at `W200`: `W110-W200`.
+- A full repeated boss cycle ending at `W500`: `W410-W500`.
+- A full repeated boss cycle ending at `W1000`: `W910-W1000`.
+- A full repeated boss cycle ending at `W2000`: `W1910-W2000`.
+
+This keeps the headline late anchors (`W200`, `W500`, `W1000`, `W2000`) while ensuring late-wave review still includes Slime, Boar, Wisp, Bandit, Golem, Ghost, Knight, Shaman, Assassin, and Drake bosses instead of Drake alone.
+
+| Checkpoint band | Why it matters |
+|---|---|
+| W10-W100 | First full boss-family loop. Establishes per-family baseline behavior and boss mechanic coverage. |
+| W110-W200 | Repeated-table midgame boss cycle anchored by `W200`. |
+| W410-W500 | Long-run boss cycle before Armor cap pressure dominates. |
+| W910-W1000 | Late-wave boss cycle with high hit-size pressure across multiple families. |
+| W1910-W2000 | Extreme high-wave brittleness cycle anchored by `W2000`. |
 
 ## Scenario 1: Balanced
 

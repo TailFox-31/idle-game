@@ -85,6 +85,8 @@ Existing saves remain compatible because upgrade levels are loaded by `UpgradeTr
 
 The table repeats from W101: W101-W110 is Slime/Boss_Slime, W111-W120 is Boar/Boss_Boar, and so on.
 
+Editor-only balance scenario exports should sample full boss cycles from this repeating table when summarizing late-wave balance. That keeps `W200`, `W500`, `W1000`, and `W2000` anchored in the report without letting repeated Drake bosses dominate the late-wave rows.
+
 ## Family Roles And Future Hooks
 
 | Family | Current role | Future hook |
