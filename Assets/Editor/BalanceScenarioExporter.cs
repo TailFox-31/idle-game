@@ -212,19 +212,19 @@ namespace IdleGame.EditorTools
                 enemyStats.AttackPower,
                 player.FlatDamageReduction,
                 player.ArmorPercent);
+            var statusHooks = BuildEnemyStatusHooks(enemy.BossMechanic, player, enemyStats, playerHit);
+            var beforePlayerAttackResolved = statusHooks.Get(BattleFlowHookPoint.BeforePlayerAttackResolved);
+            var beforeEnemyAttackResolved = statusHooks.Get(BattleFlowHookPoint.BeforeEnemyAttackResolved);
 
             var rawPlayerDps = playerHit * player.AttacksPerSecond;
-            var enemyDamageTakenMultiplier = EnemyDamageTakenMultiplier(enemy.BossMechanic);
-            var enemyRecovery = enemyStats.HealthRegenPerSecond
-                + EnemyMechanicRecovery(enemy.BossMechanic, enemyStats.MaxHealth);
+            var enemyDamageTakenMultiplier = beforePlayerAttackResolved.DamageTakenMultiplier;
+            var enemyRecovery = enemyStats.HealthRegenPerSecond + beforePlayerAttackResolved.RecoveryPerSecond;
             var effectivePlayerDps = Mathf.Max(0.01f, (rawPlayerDps * enemyDamageTakenMultiplier) - enemyRecovery);
 
-            var enemyOutgoingMultiplier = EnemyOutgoingMultiplier(enemy.BossMechanic);
+            var enemyOutgoingMultiplier = beforeEnemyAttackResolved.OutgoingDamageMultiplier;
             var incomingDps = incomingHit * enemyStats.AttacksPerSecond * enemyOutgoingMultiplier;
 
-            var reflectDps = enemy.BossMechanic.Type == CombatMechanicType.ReflectWindow
-                ? ReflectDps(enemy.BossMechanic, playerHit, player.AttacksPerSecond, player.FlatDamageReduction, player.ArmorPercent)
-                : 0f;
+            var reflectDps = beforePlayerAttackResolved.RetaliationDps;
             var effectiveIncomingDps = incomingDps + reflectDps;
 
             var noSkillTtk = enemyStats.MaxHealth / effectivePlayerDps;
@@ -255,6 +255,7 @@ namespace IdleGame.EditorTools
                 EnemyName = enemy.EnemyId,
                 BehaviorLabel = enemy.BehaviorLabel,
                 Mechanic = enemy.BossMechanic,
+                StatusHooks = statusHooks,
                 Route = route,
                 Player = player,
                 Enemy = enemyStats,
@@ -274,6 +275,99 @@ namespace IdleGame.EditorTools
 
             row.Flags = BuildBaseFlags(row);
             return row;
+        }
+
+        private static StatusHookSnapshotCollection BuildEnemyStatusHooks(
+            CombatMechanicDefinition mechanic,
+            CombatantStats player,
+            CombatantStats enemy,
+            int playerHit)
+        {
+            var beforePlayerAttackResolved = new StatusHookSnapshot(
+                BattleFlowHookPoint.BeforePlayerAttackResolved,
+                BuildEnemyStatuses(mechanic, BattleFlowHookPoint.BeforePlayerAttackResolved),
+                EnemyDamageTakenMultiplier(mechanic),
+                1f,
+                EnemyMechanicRecovery(mechanic, enemy.MaxHealth),
+                mechanic.Type == CombatMechanicType.ReflectWindow
+                    ? ReflectDps(mechanic, playerHit, player.AttacksPerSecond, player.FlatDamageReduction, player.ArmorPercent)
+                    : 0f);
+
+            var beforeEnemyAttackResolved = new StatusHookSnapshot(
+                BattleFlowHookPoint.BeforeEnemyAttackResolved,
+                BuildEnemyStatuses(mechanic, BattleFlowHookPoint.BeforeEnemyAttackResolved),
+                1f,
+                EnemyOutgoingMultiplier(mechanic),
+                0f,
+                0f);
+
+            return new StatusHookSnapshotCollection(beforePlayerAttackResolved, beforeEnemyAttackResolved);
+        }
+
+        private static CombatRuntimeStatus[] BuildEnemyStatuses(
+            CombatMechanicDefinition mechanic,
+            BattleFlowHookPoint hookPoint)
+        {
+            if (!mechanic.IsDefined)
+            {
+                return Array.Empty<CombatRuntimeStatus>();
+            }
+
+            if (!TryBuildEnemyStatus(mechanic, hookPoint, out var status))
+            {
+                return Array.Empty<CombatRuntimeStatus>();
+            }
+
+            return new[] { status };
+        }
+
+        private static bool TryBuildEnemyStatus(
+            CombatMechanicDefinition mechanic,
+            BattleFlowHookPoint hookPoint,
+            out CombatRuntimeStatus status)
+        {
+            status = default;
+            if (!mechanic.IsDefined)
+            {
+                return false;
+            }
+
+            var statusId = hookPoint switch
+            {
+                BattleFlowHookPoint.BeforePlayerAttackResolved => $"enemy.{mechanic.Type.ToString().ToLowerInvariant()}.incoming-window",
+                BattleFlowHookPoint.BeforeEnemyAttackResolved => $"enemy.{mechanic.Type.ToString().ToLowerInvariant()}.outgoing-window",
+                _ => $"enemy.{mechanic.Type.ToString().ToLowerInvariant()}",
+            };
+
+            status = new CombatRuntimeStatus(
+                statusId,
+                mechanic.DisplayName,
+                GetMechanicRemainingDuration(mechanic),
+                1,
+                hookPoint == BattleFlowHookPoint.BeforeEnemyAttackResolved,
+                false,
+                BuildStatusText(mechanic, hookPoint));
+            return true;
+        }
+
+        private static float GetMechanicRemainingDuration(CombatMechanicDefinition mechanic)
+        {
+            return mechanic.IsDefined ? Mathf.Max(0f, mechanic.ActiveDuration) : 0f;
+        }
+
+        private static string BuildStatusText(CombatMechanicDefinition mechanic, BattleFlowHookPoint hookPoint)
+        {
+            if (!mechanic.IsDefined)
+            {
+                return string.Empty;
+            }
+
+            return hookPoint switch
+            {
+                BattleFlowHookPoint.BeforePlayerAttackResolved => $"{mechanic.DisplayName} incoming window",
+                BattleFlowHookPoint.BeforeEnemyAttackResolved => $"{mechanic.DisplayName} outgoing window",
+                _ => mechanic.DisplayName,
+            };
         }
 
         private static string BuildBaseFlags(Row row)
@@ -616,6 +710,7 @@ namespace IdleGame.EditorTools
             public string EnemyName;
             public string BehaviorLabel;
             public CombatMechanicDefinition Mechanic;
+            public StatusHookSnapshotCollection StatusHooks;
             public Route Route;
             public CombatantStats Player;
             public CombatantStats Enemy;
@@ -677,6 +772,56 @@ namespace IdleGame.EditorTools
                     $"{Fmt(maxHitPercent)}%",
                     Escape(Flags) + " |",
                 });
+            }
+        }
+
+        private readonly struct StatusHookSnapshot
+        {
+            public StatusHookSnapshot(
+                BattleFlowHookPoint hookPoint,
+                CombatRuntimeStatus[] statuses,
+                float damageTakenMultiplier,
+                float outgoingDamageMultiplier,
+                float recoveryPerSecond,
+                float retaliationDps)
+            {
+                HookPoint = hookPoint;
+                Statuses = statuses ?? Array.Empty<CombatRuntimeStatus>();
+                DamageTakenMultiplier = damageTakenMultiplier;
+                OutgoingDamageMultiplier = outgoingDamageMultiplier;
+                RecoveryPerSecond = recoveryPerSecond;
+                RetaliationDps = retaliationDps;
+            }
+
+            public BattleFlowHookPoint HookPoint { get; }
+            public CombatRuntimeStatus[] Statuses { get; }
+            public float DamageTakenMultiplier { get; }
+            public float OutgoingDamageMultiplier { get; }
+            public float RecoveryPerSecond { get; }
+            public float RetaliationDps { get; }
+        }
+
+        private readonly struct StatusHookSnapshotCollection
+        {
+            private readonly StatusHookSnapshot beforePlayerAttackResolved;
+            private readonly StatusHookSnapshot beforeEnemyAttackResolved;
+
+            public StatusHookSnapshotCollection(
+                StatusHookSnapshot beforePlayerAttackResolved,
+                StatusHookSnapshot beforeEnemyAttackResolved)
+            {
+                this.beforePlayerAttackResolved = beforePlayerAttackResolved;
+                this.beforeEnemyAttackResolved = beforeEnemyAttackResolved;
+            }
+
+            public StatusHookSnapshot Get(BattleFlowHookPoint hookPoint)
+            {
+                return hookPoint switch
+                {
+                    BattleFlowHookPoint.BeforePlayerAttackResolved => beforePlayerAttackResolved,
+                    BattleFlowHookPoint.BeforeEnemyAttackResolved => beforeEnemyAttackResolved,
+                    _ => default,
+                };
             }
         }
 
