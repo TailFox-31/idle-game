@@ -39,14 +39,15 @@ namespace IdleGame.EditorTools
             new("Boss Killer", 2.25f, 1.35f, 0.65f, 0.85f, 1.2f, 1.1f, 0.35f),
         };
 
-        [MenuItem("Idle Game/Export Balance Scenarios")]
+        [MenuItem("Tools/Idle Game/Export Balance Scenarios")]
         public static void Export()
         {
             var rows = BuildRows();
             AddComparisonFlags(rows);
             WriteMarkdown(rows);
             AssetDatabase.Refresh();
-            Debug.Log($"Balance scenario export written to {OutputPath}");
+            var absoluteOutputPath = Path.GetFullPath(Path.Combine(Application.dataPath, "..", OutputPath));
+            Debug.Log($"Balance scenario export written to {absoluteOutputPath}");
         }
 
         private static List<Row> BuildRows()
