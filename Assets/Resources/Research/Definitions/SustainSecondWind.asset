@@ -15,10 +15,10 @@ MonoBehaviour:
   researchId: sustain_second_wind
   axis: 0
   displayName: Second Wind
-  description: Passive regeneration between hits.
+  description: Passive recovery stays online between hits.
   maxLevel: 5
   costPerLevel: 1
   prerequisiteIds: []
-  effectType: 2
+  effectType: 1
   effectValueA: 0.2
   effectValueB: 0

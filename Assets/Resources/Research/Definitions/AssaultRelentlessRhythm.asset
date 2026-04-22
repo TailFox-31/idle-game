@@ -15,10 +15,10 @@ MonoBehaviour:
   researchId: assault_relentless_rhythm
   axis: 1
   displayName: Relentless Rhythm
-  description: Permanent attack speed drills.
+  description: Faster attack rhythm over the full fight.
   maxLevel: 5
   costPerLevel: 1
   prerequisiteIds: []
-  effectType: 4
+  effectType: 2
   effectValueA: 0.05
   effectValueB: 0

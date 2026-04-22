@@ -178,14 +178,8 @@ namespace IdleGame
 
                 switch (definition.EffectType)
                 {
-                    case ResearchEffectType.MaxHealthFlat:
-                        modifiedStats = modifiedStats.Add(maxHealth: Mathf.RoundToInt(definition.EffectValueA * level));
-                        break;
                     case ResearchEffectType.HealthRegenFlat:
                         modifiedStats = modifiedStats.Add(healthRegenPerSecond: definition.EffectValueA * level);
-                        break;
-                    case ResearchEffectType.AttackPowerFlat:
-                        modifiedStats = modifiedStats.Add(attackPower: Mathf.RoundToInt(definition.EffectValueA * level));
                         break;
                     case ResearchEffectType.AttackSpeedFlat:
                         modifiedStats = modifiedStats.Add(attacksPerSecond: definition.EffectValueA * level);

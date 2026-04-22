@@ -19,6 +19,6 @@ MonoBehaviour:
   maxLevel: 5
   costPerLevel: 1
   prerequisiteIds: []
-  effectType: 5
+  effectType: 3
   effectValueA: 0.03
   effectValueB: 0.005

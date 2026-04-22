@@ -15,10 +15,10 @@ MonoBehaviour:
   researchId: assault_sharpened_blows
   axis: 1
   displayName: Sharpened Blows
-  description: Permanent attack power training.
+  description: Sharper burst windows hit harder.
   maxLevel: 5
   costPerLevel: 1
   prerequisiteIds: []
-  effectType: 3
-  effectValueA: 1
+  effectType: 4
+  effectValueA: 0.08
   effectValueB: 0

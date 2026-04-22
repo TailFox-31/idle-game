@@ -15,10 +15,10 @@ MonoBehaviour:
   researchId: sustain_vital_reservoir
   axis: 0
   displayName: Vital Reservoir
-  description: Permanent max health reserves.
+  description: Deeper reserves improve passive recovery.
   maxLevel: 5
   costPerLevel: 1
   prerequisiteIds: []
   effectType: 1
-  effectValueA: 8
+  effectValueA: 0.35
   effectValueB: 0
