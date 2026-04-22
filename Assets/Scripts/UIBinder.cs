@@ -1,5 +1,6 @@
 using TMPro;
 using UnityEngine;
+using UnityEngine.Events;
 using UnityEngine.UI;
 using System.Collections.Generic;
 
@@ -33,6 +34,15 @@ namespace IdleGame
         private static readonly Vector2 RuntimeSkillPanelSize = new(768f, 72f);
         private static readonly Vector2 RuntimeSkillButtonSize = new(156f, 52f);
         private static readonly Vector2 LastStandButtonSize = new(240f, 52f);
+        private static readonly Vector2 RuntimeResearchPanelAnchor = new(1f, 0f);
+        private static readonly Vector2 RuntimeResearchPanelPivot = new(1f, 0f);
+        private static readonly Vector2 RuntimeResearchPanelPosition = new(-20f, 20f);
+        private static readonly Vector2 RuntimeResearchPanelSize = new(430f, 472f);
+        private static readonly Vector2 RuntimeResearchHeaderPosition = new(16f, -16f);
+        private static readonly Vector2 RuntimeResearchHeaderSize = new(398f, 44f);
+        private static readonly Vector2 RuntimeResearchButtonSize = new(398f, 62f);
+        private const float RuntimeResearchButtonTopOffset = -68f;
+        private const float RuntimeResearchButtonSpacing = 68f;
         private static readonly Vector2 GuardButtonPosition = new(0f, 0f);
         private static readonly Vector2 LastStandButtonPosition = new(168f, 0f);
         private static readonly Vector2 BurstButtonPosition = new(420f, 0f);
@@ -143,13 +153,26 @@ namespace IdleGame
         [SerializeField]
         private TMP_Text travelButtonText;
 
+        private sealed class ResearchButtonBinding
+        {
+            public Button Button;
+            public TMP_Text Label;
+            public string ResearchId;
+            public UnityAction ClickAction;
+        }
+
         private bool ownsRuntimeResetButton;
         private bool ownsRuntimeWaveTravelControls;
         private bool ownsRuntimeUpgradeControls;
         private bool ownsRuntimeSkillControls;
+        private bool ownsRuntimeResearchControls;
+        private bool buttonsRegistered;
         private readonly List<GameObject> runtimeUpgradeObjects = new();
         private readonly List<GameObject> runtimeSkillObjects = new();
+        private readonly List<GameObject> runtimeResearchObjects = new();
+        private readonly List<ResearchButtonBinding> researchButtonBindings = new();
         private GameManager gameManager;
+        private TMP_Text researchPointsText;
         private static readonly Color32 TravelTargetHighlightColor = new(255, 214, 102, 255);
 
 #if UNITY_EDITOR
@@ -241,6 +264,16 @@ namespace IdleGame
             gameManager?.TravelToSelectedWave();
         }
 
+        public void RequestInvestResearch(string researchId)
+        {
+            if (string.IsNullOrWhiteSpace(researchId))
+            {
+                return;
+            }
+
+            gameManager?.TryInvestResearch(researchId);
+        }
+
         private void OnEnable()
         {
             EnsureResetSaveButton();
@@ -250,6 +283,7 @@ namespace IdleGame
             EnsureLastStandButton();
             EnsureBurstButton();
             EnsureFrenzyButton();
+            EnsureResearchPanel();
             ConfigureSkillLayout();
             ConfigurePlayerReadout();
             ConfigureEnemyReadout();
@@ -268,6 +302,7 @@ namespace IdleGame
             DestroyRuntimeWaveTravelControls();
             DestroyRuntimeUpgradeControls();
             DestroyRuntimeSkillControls();
+            DestroyRuntimeResearchControls();
             Unbind();
         }
 
@@ -310,6 +345,7 @@ namespace IdleGame
 
         private void Refresh(GameSnapshot snapshot)
         {
+            EnsureResearchButtons(snapshot);
             var bossTag = IsBossEnemy(snapshot.Battle.EnemyId) ? " BOSS" : string.Empty;
             var lootMultiplier = GetGoldGainMultiplier(snapshot);
             var lootBonusPercent = Mathf.Max(0, Mathf.RoundToInt((lootMultiplier - 1f) * 100f));
@@ -363,6 +399,7 @@ namespace IdleGame
             RefreshLastStandButton(snapshot);
             RefreshBurstButton(snapshot);
             RefreshFrenzyButton(snapshot);
+            RefreshResearchPanel(snapshot);
 
             if (previousWaveButton != null)
             {
@@ -513,6 +550,13 @@ namespace IdleGame
 
         private void RegisterButtons()
         {
+            if (buttonsRegistered)
+            {
+                return;
+            }
+
+            buttonsRegistered = true;
+
             if (attackPowerButton != null)
             {
                 attackPowerButton.onClick.AddListener(RequestAttackPowerUpgrade);
@@ -582,10 +626,19 @@ namespace IdleGame
             {
                 travelButton.onClick.AddListener(RequestTravelToSelectedWave);
             }
+
+            RegisterResearchButtons();
         }
 
         private void UnregisterButtons()
         {
+            if (!buttonsRegistered)
+            {
+                return;
+            }
+
+            buttonsRegistered = false;
+
             if (attackPowerButton != null)
             {
                 attackPowerButton.onClick.RemoveListener(RequestAttackPowerUpgrade);
@@ -655,6 +708,8 @@ namespace IdleGame
             {
                 travelButton.onClick.RemoveListener(RequestTravelToSelectedWave);
             }
+
+            UnregisterResearchButtons();
         }
 
         private void Unbind()
@@ -714,10 +769,7 @@ namespace IdleGame
             label.color = Color.white;
             label.richText = false;
 
-            if (label.font == null && TMP_Settings.defaultFontAsset != null)
-            {
-                label.font = TMP_Settings.defaultFontAsset;
-            }
+            TryAssignDefaultFont(label);
 
             ownsRuntimeResetButton = true;
         }
@@ -856,6 +908,193 @@ namespace IdleGame
             ownsRuntimeSkillControls = true;
         }
 
+        private void EnsureResearchPanel()
+        {
+            if (researchPointsText != null)
+            {
+                return;
+            }
+
+            var parent = GetResearchRootParent();
+            if (parent == null)
+            {
+                return;
+            }
+
+            var panelObject = new GameObject("RuntimeResearchPanel", typeof(RectTransform), typeof(Image));
+            panelObject.transform.SetParent(parent, false);
+            runtimeResearchObjects.Add(panelObject);
+
+            var panelRect = panelObject.GetComponent<RectTransform>();
+            ConfigureResearchPanelRect(panelRect);
+
+            var panelImage = panelObject.GetComponent<Image>();
+            panelImage.color = new Color32(22, 28, 36, 196);
+
+            var headerObject = new GameObject("ResearchPointsLabel", typeof(RectTransform), typeof(TextMeshProUGUI));
+            headerObject.transform.SetParent(panelObject.transform, false);
+            runtimeResearchObjects.Add(headerObject);
+
+            var headerRect = headerObject.GetComponent<RectTransform>();
+            headerRect.anchorMin = new Vector2(0f, 1f);
+            headerRect.anchorMax = new Vector2(0f, 1f);
+            headerRect.pivot = new Vector2(0f, 1f);
+            headerRect.anchoredPosition = RuntimeResearchHeaderPosition;
+            headerRect.sizeDelta = RuntimeResearchHeaderSize;
+
+            researchPointsText = headerObject.GetComponent<TextMeshProUGUI>();
+            researchPointsText.fontSize = 22f;
+            researchPointsText.alignment = TextAlignmentOptions.TopLeft;
+            researchPointsText.enableWordWrapping = false;
+            researchPointsText.color = Color.white;
+            researchPointsText.richText = true;
+            researchPointsText.text = "Research 0 RP";
+
+            TryAssignDefaultFont(researchPointsText);
+
+            ownsRuntimeResearchControls = true;
+        }
+
+        private void EnsureResearchButtons(GameSnapshot snapshot)
+        {
+            EnsureResearchPanel();
+            if (researchPointsText == null)
+            {
+                return;
+            }
+
+            var entries = snapshot.Researches;
+            if (HasMatchingResearchButtons(entries))
+            {
+                return;
+            }
+
+            RebuildResearchButtons(entries);
+        }
+
+        private bool HasMatchingResearchButtons(ResearchViewData[] entries)
+        {
+            if (entries == null)
+            {
+                return researchButtonBindings.Count == 0;
+            }
+
+            if (researchButtonBindings.Count != entries.Length)
+            {
+                return false;
+            }
+
+            for (var i = 0; i < entries.Length; i++)
+            {
+                if (!string.Equals(researchButtonBindings[i].ResearchId, entries[i].ResearchId, System.StringComparison.Ordinal))
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        private void RebuildResearchButtons(ResearchViewData[] entries)
+        {
+            UnregisterResearchButtons();
+
+            for (var i = runtimeResearchObjects.Count - 1; i >= 0; i--)
+            {
+                if (runtimeResearchObjects[i] != null && runtimeResearchObjects[i].name.StartsWith("ResearchEntry", System.StringComparison.Ordinal))
+                {
+                    Destroy(runtimeResearchObjects[i]);
+                    runtimeResearchObjects.RemoveAt(i);
+                }
+            }
+
+            researchButtonBindings.Clear();
+            if (entries == null || entries.Length == 0 || researchPointsText == null)
+            {
+                return;
+            }
+
+            var parent = researchPointsText.transform.parent as RectTransform;
+            if (parent == null)
+            {
+                return;
+            }
+
+            for (var i = 0; i < entries.Length; i++)
+            {
+                var entry = entries[i];
+                var button = CreateResearchButton(
+                    parent,
+                    $"ResearchEntry_{i}_{entry.ResearchId}",
+                    new Vector2(16f, RuntimeResearchButtonTopOffset - (RuntimeResearchButtonSpacing * i)),
+                    "Research");
+                runtimeResearchObjects.Add(button.gameObject);
+
+                var clickAction = BuildResearchClickAction(entry.ResearchId);
+                var binding = new ResearchButtonBinding
+                {
+                    Button = button,
+                    Label = GetButtonLabel(button),
+                    ResearchId = entry.ResearchId,
+                    ClickAction = clickAction,
+                };
+                researchButtonBindings.Add(binding);
+            }
+
+            if (buttonsRegistered)
+            {
+                RegisterResearchButtons();
+            }
+        }
+
+        private UnityAction BuildResearchClickAction(string researchId)
+        {
+            return () => RequestInvestResearch(researchId);
+        }
+
+        private void RefreshResearchPanel(GameSnapshot snapshot)
+        {
+            if (researchPointsText != null)
+            {
+                researchPointsText.text = $"Research {snapshot.ResearchPoints} RP";
+            }
+
+            for (var i = 0; i < researchButtonBindings.Count && i < snapshot.Researches.Length; i++)
+            {
+                RefreshResearchButton(snapshot.Researches[i], researchButtonBindings[i]);
+            }
+        }
+
+        private void RefreshResearchButton(ResearchViewData entry, ResearchButtonBinding binding)
+        {
+            if (binding == null)
+            {
+                return;
+            }
+
+            if (binding.Label != null)
+            {
+                binding.Label.text = BuildResearchButtonText(entry);
+                binding.Label.fontSize = 17f;
+                binding.Label.alignment = TextAlignmentOptions.MidlineLeft;
+                binding.Label.enableWordWrapping = false;
+                binding.Label.richText = true;
+            }
+
+            if (binding.Button != null)
+            {
+                binding.Button.interactable = entry.CanInvest;
+                if (binding.Button.targetGraphic is Graphic graphic)
+                {
+                    graphic.color = entry.IsMaxed
+                        ? new Color32(74, 74, 74, 200)
+                        : entry.CanInvest
+                            ? new Color32(50, 72, 96, 220)
+                            : new Color32(44, 46, 54, 210);
+                }
+            }
+        }
+
         private void EnsureWaveTravelControls()
         {
             if (travelButtonText == null && travelButton != null)
@@ -980,6 +1219,57 @@ namespace IdleGame
             ownsRuntimeSkillControls = false;
         }
 
+        private void DestroyRuntimeResearchControls()
+        {
+            if (!ownsRuntimeResearchControls)
+            {
+                return;
+            }
+
+            UnregisterResearchButtons();
+
+            for (var i = 0; i < runtimeResearchObjects.Count; i++)
+            {
+                if (runtimeResearchObjects[i] != null)
+                {
+                    Destroy(runtimeResearchObjects[i]);
+                }
+            }
+
+            runtimeResearchObjects.Clear();
+            researchButtonBindings.Clear();
+            researchPointsText = null;
+            ownsRuntimeResearchControls = false;
+        }
+
+        private void RegisterResearchButtons()
+        {
+            for (var i = 0; i < researchButtonBindings.Count; i++)
+            {
+                var binding = researchButtonBindings[i];
+                if (binding?.Button == null || binding.ClickAction == null)
+                {
+                    continue;
+                }
+
+                binding.Button.onClick.AddListener(binding.ClickAction);
+            }
+        }
+
+        private void UnregisterResearchButtons()
+        {
+            for (var i = 0; i < researchButtonBindings.Count; i++)
+            {
+                var binding = researchButtonBindings[i];
+                if (binding?.Button == null || binding.ClickAction == null)
+                {
+                    continue;
+                }
+
+                binding.Button.onClick.RemoveListener(binding.ClickAction);
+            }
+        }
+
         private static TMP_Text CreateTravelLabel(RectTransform parent, string name, string text)
         {
             var labelObject = new GameObject(name, typeof(RectTransform), typeof(TextMeshProUGUI));
@@ -999,10 +1289,7 @@ namespace IdleGame
             label.color = Color.white;
             label.richText = true;
 
-            if (label.font == null && TMP_Settings.defaultFontAsset != null)
-            {
-                label.font = TMP_Settings.defaultFontAsset;
-            }
+            TryAssignDefaultFont(label);
 
             return label;
         }
@@ -1179,10 +1466,7 @@ namespace IdleGame
             label.color = Color.white;
             label.richText = false;
 
-            if (label.font == null && TMP_Settings.defaultFontAsset != null)
-            {
-                label.font = TMP_Settings.defaultFontAsset;
-            }
+            TryAssignDefaultFont(label);
 
             return button;
         }
@@ -1217,10 +1501,47 @@ namespace IdleGame
             label.color = Color.white;
             label.richText = false;
 
-            if (label.font == null && TMP_Settings.defaultFontAsset != null)
-            {
-                label.font = TMP_Settings.defaultFontAsset;
-            }
+            TryAssignDefaultFont(label);
+
+            return button;
+        }
+
+        private static Button CreateResearchButton(RectTransform parent, string name, Vector2 anchoredPosition, string labelText)
+        {
+            var buttonObject = new GameObject(name, typeof(RectTransform), typeof(Image), typeof(Button));
+            buttonObject.transform.SetParent(parent, false);
+
+            var rectTransform = buttonObject.GetComponent<RectTransform>();
+            rectTransform.anchorMin = new Vector2(0f, 1f);
+            rectTransform.anchorMax = new Vector2(0f, 1f);
+            rectTransform.pivot = new Vector2(0f, 1f);
+            rectTransform.sizeDelta = RuntimeResearchButtonSize;
+            rectTransform.anchoredPosition = anchoredPosition;
+
+            var image = buttonObject.GetComponent<Image>();
+            image.color = new Color32(50, 72, 96, 220);
+
+            var button = buttonObject.GetComponent<Button>();
+            button.targetGraphic = image;
+
+            var labelObject = new GameObject("Label", typeof(RectTransform), typeof(TextMeshProUGUI));
+            labelObject.transform.SetParent(buttonObject.transform, false);
+
+            var labelRect = labelObject.GetComponent<RectTransform>();
+            labelRect.anchorMin = Vector2.zero;
+            labelRect.anchorMax = Vector2.one;
+            labelRect.offsetMin = new Vector2(12f, 6f);
+            labelRect.offsetMax = new Vector2(-12f, -6f);
+
+            var label = labelObject.GetComponent<TextMeshProUGUI>();
+            label.text = labelText;
+            label.fontSize = 17f;
+            label.alignment = TextAlignmentOptions.MidlineLeft;
+            label.enableWordWrapping = false;
+            label.color = Color.white;
+            label.richText = true;
+
+            TryAssignDefaultFont(label);
 
             return button;
         }
@@ -1265,10 +1586,7 @@ namespace IdleGame
             label.color = Color.white;
             label.richText = false;
 
-            if (label.font == null && TMP_Settings.defaultFontAsset != null)
-            {
-                label.font = TMP_Settings.defaultFontAsset;
-            }
+            TryAssignDefaultFont(label);
 
             return button;
         }
@@ -1301,6 +1619,20 @@ namespace IdleGame
             rectTransform.sizeDelta = RuntimeSkillPanelSize;
         }
 
+        private static void ConfigureResearchPanelRect(RectTransform rectTransform)
+        {
+            if (rectTransform == null)
+            {
+                return;
+            }
+
+            rectTransform.anchorMin = RuntimeResearchPanelAnchor;
+            rectTransform.anchorMax = RuntimeResearchPanelAnchor;
+            rectTransform.pivot = RuntimeResearchPanelPivot;
+            rectTransform.anchoredPosition = RuntimeResearchPanelPosition;
+            rectTransform.sizeDelta = RuntimeResearchPanelSize;
+        }
+
         private static TMP_Text GetButtonLabel(Button button)
         {
             if (button == null)
@@ -1310,6 +1642,26 @@ namespace IdleGame
 
             var labelTransform = button.transform.Find("Label");
             return labelTransform != null ? labelTransform.GetComponent<TMP_Text>() : null;
+        }
+
+        private static void TryAssignDefaultFont(TMP_Text label)
+        {
+            if (label == null || label.font != null)
+            {
+                return;
+            }
+
+            try
+            {
+                var defaultFont = TMP_Settings.defaultFontAsset;
+                if (defaultFont != null)
+                {
+                    label.font = defaultFont;
+                }
+            }
+            catch
+            {
+            }
         }
 
         private static string BuildWaveTravelReadout(GameSnapshot snapshot)
@@ -1428,6 +1780,16 @@ namespace IdleGame
             };
         }
 
+        private static string BuildResearchButtonText(ResearchViewData data)
+        {
+            var actionText = data.IsMaxed
+                ? "Maxed"
+                : data.CanInvest
+                    ? $"Invest {data.NextLevelCost} RP"
+                    : $"Need {data.NextLevelCost} RP";
+            return $"[{data.Axis}] {data.DisplayName}  Lv.{data.Level}/{data.MaxLevel}\n{data.Description} | {actionText}";
+        }
+
         private void EnsureUpgradeButtonLabels()
         {
             if (attackPowerButtonText == null && attackPowerButton != null)
@@ -1494,6 +1856,21 @@ namespace IdleGame
             }
 
             return transform as RectTransform;
+        }
+
+        private RectTransform GetResearchRootParent()
+        {
+            if (enemyText != null && enemyText.rectTransform.parent is RectTransform enemyParent)
+            {
+                return enemyParent;
+            }
+
+            if (playerStatsText != null && playerStatsText.rectTransform.parent is RectTransform playerParent)
+            {
+                return playerParent;
+            }
+
+            return GetUpgradeRootParent();
         }
 
         private bool HasAllUpgradeButtons()

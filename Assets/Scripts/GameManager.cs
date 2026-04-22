@@ -65,6 +65,8 @@ namespace IdleGame
             CombatantStats playerStats,
             BattleSnapshot battle,
             UpgradeViewData[] upgrades,
+            int researchPoints,
+            ResearchViewData[] researches,
             int nextMilestoneWave,
             int milestoneAttackBonus,
             int lastMilestoneWave,
@@ -78,6 +80,8 @@ namespace IdleGame
             PlayerStats = playerStats;
             Battle = battle;
             Upgrades = upgrades;
+            ResearchPoints = researchPoints;
+            Researches = researches;
             NextMilestoneWave = nextMilestoneWave;
             MilestoneAttackBonus = milestoneAttackBonus;
             LastMilestoneWave = lastMilestoneWave;
@@ -98,6 +102,10 @@ namespace IdleGame
         public BattleSnapshot Battle { get; }
 
         public UpgradeViewData[] Upgrades { get; }
+
+        public int ResearchPoints { get; }
+
+        public ResearchViewData[] Researches { get; }
 
         public int NextMilestoneWave { get; }
 
@@ -122,7 +130,9 @@ namespace IdleGame
             public int lastMilestoneGoldReward;
             public int lastMilestoneAttackReward;
             public int milestoneAttackBonus;
+            public int researchPoints;
             public List<UpgradeSaveData> upgrades = new();
+            public List<ResearchLevelSaveData> researchLevels = new();
         }
 
         [Serializable]
@@ -132,7 +142,15 @@ namespace IdleGame
             public int level;
         }
 
+        [Serializable]
+        private sealed class ResearchLevelSaveData
+        {
+            public string researchId;
+            public int level;
+        }
+
         private const string SaveKey = "IdleGame.PrototypeSave";
+        private const string DefaultResearchDatabaseResourcePath = "Research/DefaultResearchDatabase";
 
         [SerializeField]
         private CombatantStats playerBaseStats = new CombatantStats(30, 2, 1f);
@@ -145,6 +163,10 @@ namespace IdleGame
 
         [SerializeField]
         private UIBinder uiBinder;
+
+        [Header("Research")]
+        [SerializeField]
+        private ResearchDatabase researchDatabase;
 
         [SerializeField, Min(0f)]
         private float playerRespawnDelay = 2f;
@@ -209,6 +231,7 @@ namespace IdleGame
         private List<UpgradeDefinition> upgrades = BuildDefaultUpgradeDefinitions();
 
         private readonly Dictionary<UpgradeTrack, UpgradeState> upgradeStates = new();
+        private readonly ResearchRuntime researchRuntime = new();
         private AutoBattleSystem battleSystem;
         private int gold;
         private int currentWave = 1;
@@ -218,6 +241,7 @@ namespace IdleGame
         private int lastMilestoneGoldReward;
         private int lastMilestoneAttackReward;
         private int milestoneAttackBonus;
+        private int researchPoints;
 
         public event Action<GameSnapshot> StateChanged;
 
@@ -227,6 +251,7 @@ namespace IdleGame
         {
             EnsureUpgradeDefinitions();
             InitializeUpgradeStates();
+            InitializeResearchRuntime();
             LoadProgressOrInitializeDefaults();
             InitializeBattleSystem();
 
@@ -260,7 +285,20 @@ namespace IdleGame
                 return false;
             }
 
-            battleSystem?.SetPlayerStats(BuildPlayerStats());
+            ApplyRuntimeCombatConfiguration();
+            SaveProgress();
+            PublishState();
+            return true;
+        }
+
+        public bool TryInvestResearch(string researchId)
+        {
+            if (!researchRuntime.TryInvest(researchId, ref researchPoints))
+            {
+                return false;
+            }
+
+            ApplyRuntimeCombatConfiguration();
             SaveProgress();
             PublishState();
             return true;
@@ -348,13 +386,14 @@ namespace IdleGame
             lastMilestoneGoldReward = Mathf.Max(0, saveData.lastMilestoneGoldReward);
             lastMilestoneAttackReward = Mathf.Max(0, saveData.lastMilestoneAttackReward);
             milestoneAttackBonus = Mathf.Max(0, saveData.milestoneAttackBonus);
+            researchPoints = Mathf.Max(0, saveData.researchPoints);
 
-            if (saveData.upgrades == null)
+            if (saveData.upgrades != null)
             {
-                return;
+                LoadUpgradeLevels(saveData.upgrades);
             }
 
-            LoadUpgradeLevels(saveData.upgrades);
+            LoadResearchLevels(saveData.researchLevels);
         }
 
         private void ApplyFreshState()
@@ -367,11 +406,24 @@ namespace IdleGame
             lastMilestoneGoldReward = 0;
             lastMilestoneAttackReward = 0;
             milestoneAttackBonus = 0;
+            researchPoints = 0;
 
             foreach (var state in upgradeStates.Values)
             {
                 state.SetLevel(0);
             }
+
+            researchRuntime.ResetLevels();
+        }
+
+        private void InitializeResearchRuntime()
+        {
+            if (researchDatabase == null)
+            {
+                researchDatabase = Resources.Load<ResearchDatabase>(DefaultResearchDatabaseResourcePath);
+            }
+
+            researchRuntime.SetDatabase(researchDatabase);
         }
 
         private void EnsureUpgradeDefinitions()
@@ -472,6 +524,7 @@ namespace IdleGame
                 BuildFrenzyDefinition());
             battleSystem.GoldAwarded += HandleGoldAwarded;
             battleSystem.EnemyDefeated += HandleEnemyDefeated;
+            battleSystem.BattleFlowReached += HandleBattleFlowReached;
             battleSystem.BattleStateChanged += _ => PublishState();
         }
 
@@ -488,12 +541,22 @@ namespace IdleGame
                 return;
             }
 
+            ApplyRuntimeCombatConfiguration();
+            battleSystem.SetEnemy(enemyController.CreateSpawnDataForWave(currentWave));
+        }
+
+        private void ApplyRuntimeCombatConfiguration()
+        {
+            if (battleSystem == null)
+            {
+                return;
+            }
+
             battleSystem.SetPlayerStats(BuildPlayerStats());
             battleSystem.SetPlayerGuardDefinition(BuildGuardDefinition());
             battleSystem.SetPlayerLastStandDefinition(BuildLastStandDefinition());
             battleSystem.SetPlayerBurstDefinition(BuildBurstDefinition());
             battleSystem.SetPlayerFrenzyDefinition(BuildFrenzyDefinition());
-            battleSystem.SetEnemy(enemyController.CreateSpawnDataForWave(currentWave));
         }
 
         private void SetSelectedStartWave(int targetWave)
@@ -530,12 +593,13 @@ namespace IdleGame
                 stats = state.Definition.Apply(stats, state.Level);
             }
 
-            return stats.Add(attackPower: milestoneAttackBonus);
+            stats = stats.Add(attackPower: milestoneAttackBonus);
+            return researchRuntime.ApplyToPlayerStats(stats);
         }
 
         private CombatMechanicDefinition BuildGuardDefinition()
         {
-            return new CombatMechanicDefinition(
+            return researchRuntime.ApplyToGuardDefinition(new CombatMechanicDefinition(
                 CombatMechanicType.GuardRecovery,
                 "Guard",
                 guardCooldownDuration,
@@ -543,7 +607,7 @@ namespace IdleGame
                 damageTakenMultiplier: guardDamageTakenMultiplier,
                 recoveryPercentPerSecond: guardRecoveryPercentPerSecond,
                 triggerMode: CombatMechanicTriggerMode.Manual,
-                blocksAttacksWhileActive: false);
+                blocksAttacksWhileActive: false));
         }
 
         private CombatMechanicDefinition BuildLastStandDefinition()
@@ -561,14 +625,14 @@ namespace IdleGame
 
         private CombatMechanicDefinition BuildBurstDefinition()
         {
-            return new CombatMechanicDefinition(
+            return researchRuntime.ApplyToBurstDefinition(new CombatMechanicDefinition(
                 CombatMechanicType.PlayerBurst,
                 "Burst",
                 burstCooldownDuration,
                 burstArmedDuration,
                 attackPowerMultiplier: burstAttackPowerMultiplier,
                 triggerMode: CombatMechanicTriggerMode.Manual,
-                blocksAttacksWhileActive: false);
+                blocksAttacksWhileActive: false));
         }
 
         private CombatMechanicDefinition BuildFrenzyDefinition()
@@ -606,6 +670,7 @@ namespace IdleGame
             var battle = battleSystem != null
                 ? battleSystem.Snapshot
                 : new BattleSnapshot(0, string.Empty, 0, 0, false, 0f, string.Empty, default, default, default, default, 0, 0, 0, 0f, 0, 0f, string.Empty, string.Empty, false, 0f);
+            var researchData = researchRuntime.BuildViewData(researchPoints);
 
             return new GameSnapshot(
                 gold,
@@ -615,6 +680,8 @@ namespace IdleGame
                 BuildPlayerStats(),
                 battle,
                 upgradeData,
+                researchPoints,
+                researchData,
                 GetNextMilestoneWave(currentWave),
                 milestoneAttackBonus,
                 lastClaimedMilestoneWave,
@@ -645,6 +712,29 @@ namespace IdleGame
 
                 state.SetLevel(entry.level);
             }
+        }
+
+        private void LoadResearchLevels(List<ResearchLevelSaveData> savedResearchLevels)
+        {
+            if (savedResearchLevels == null)
+            {
+                researchRuntime.ResetLevels();
+                return;
+            }
+
+            var levels = new List<(string researchId, int level)>(savedResearchLevels.Count);
+            for (var i = 0; i < savedResearchLevels.Count; i++)
+            {
+                var entry = savedResearchLevels[i];
+                if (entry == null)
+                {
+                    continue;
+                }
+
+                levels.Add((entry.researchId, entry.level));
+            }
+
+            researchRuntime.LoadLevels(levels);
         }
 
         private int GetModifiedGoldReward(int baseAmount)
@@ -681,6 +771,34 @@ namespace IdleGame
             battleSystem?.QueueEnemy(enemyController.CreateSpawnDataForWave(currentWave));
             SaveProgress();
             PublishState();
+        }
+
+        private void HandleBattleFlowReached(BattleFlowContext battleFlowContext)
+        {
+            researchRuntime.HandleBattleFlow(battleFlowContext);
+            if (battleFlowContext.HookPoint == BattleFlowHookPoint.EnemyDefeated
+                && IsResearchBossWave(battleFlowContext.Wave))
+            {
+                AwardResearchPoints(1);
+            }
+        }
+
+        private void AwardResearchPoints(int amount)
+        {
+            var normalizedAmount = Mathf.Max(0, amount);
+            if (normalizedAmount <= 0)
+            {
+                return;
+            }
+
+            researchPoints += normalizedAmount;
+            SaveProgress();
+            PublishState();
+        }
+
+        private static bool IsResearchBossWave(int wave)
+        {
+            return wave >= 10 && wave % 10 == 0;
         }
 
         private void TryGrantMilestoneReward(int reachedWave)
@@ -734,7 +852,7 @@ namespace IdleGame
 
             if (attackRewardGranted)
             {
-                battleSystem?.SetPlayerStats(BuildPlayerStats());
+                ApplyRuntimeCombatConfiguration();
             }
         }
 
@@ -749,6 +867,7 @@ namespace IdleGame
                 lastMilestoneGoldReward = lastMilestoneGoldReward,
                 lastMilestoneAttackReward = lastMilestoneAttackReward,
                 milestoneAttackBonus = milestoneAttackBonus,
+                researchPoints = researchPoints,
             };
 
             foreach (var state in upgradeStates.Values)
@@ -757,6 +876,15 @@ namespace IdleGame
                 {
                     track = state.Definition.Track,
                     level = state.Level,
+                });
+            }
+
+            foreach (var entry in researchRuntime.EnumerateLevels())
+            {
+                saveData.researchLevels.Add(new ResearchLevelSaveData
+                {
+                    researchId = entry.researchId,
+                    level = entry.level,
                 });
             }
 
