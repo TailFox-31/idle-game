@@ -11,7 +11,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: c3f6b7c2d28b456ea8f1a2b34c5d2303, type: 3}
   m_Name: AssaultRelentlessRhythm
-  m_EditorClassIdentifier: 
+  m_EditorClassIdentifier:
   researchId: assault_relentless_rhythm
   axis: 1
   displayName: Relentless Rhythm

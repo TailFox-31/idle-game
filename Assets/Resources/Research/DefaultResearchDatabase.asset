@@ -11,7 +11,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: d4a7c8d3e39c467fb9a2b3c45d6e3404, type: 3}
   m_Name: DefaultResearchDatabase
-  m_EditorClassIdentifier: 
+  m_EditorClassIdentifier:
   definitions:
   - {fileID: 11400000, guid: 3a0d2e49e9f24cd5ff68192ab4c49910, type: 2}
   - {fileID: 11400000, guid: 4b1e3f5afa034de600792a3bc5d5aa11, type: 2}
