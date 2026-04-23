@@ -34,15 +34,17 @@ namespace IdleGame
         private static readonly Vector2 RuntimeSkillPanelSize = new(768f, 72f);
         private static readonly Vector2 RuntimeSkillButtonSize = new(156f, 52f);
         private static readonly Vector2 LastStandButtonSize = new(240f, 52f);
-        private static readonly Vector2 RuntimeResearchPanelAnchor = new(1f, 0f);
-        private static readonly Vector2 RuntimeResearchPanelPivot = new(1f, 0f);
-        private static readonly Vector2 RuntimeResearchPanelPosition = new(-20f, 20f);
-        private static readonly Vector2 RuntimeResearchPanelSize = new(430f, 472f);
+        private static readonly Vector2 RuntimeResearchDrawerAnchor = new(1f, 1f);
+        private static readonly Vector2 RuntimeResearchDrawerPivot = new(1f, 1f);
+        private static readonly Vector2 RuntimeResearchDrawerPosition = new(-20f, -250f);
+        private static readonly Vector2 RuntimeResearchDrawerSize = new(430f, 340f);
+        private static readonly Vector2 RuntimeResearchTogglePosition = new(-20f, -200f);
+        private static readonly Vector2 RuntimeResearchToggleSize = new(180f, 44f);
         private static readonly Vector2 RuntimeResearchHeaderPosition = new(16f, -16f);
         private static readonly Vector2 RuntimeResearchHeaderSize = new(398f, 44f);
-        private static readonly Vector2 RuntimeResearchButtonSize = new(398f, 62f);
-        private const float RuntimeResearchButtonTopOffset = -68f;
-        private const float RuntimeResearchButtonSpacing = 68f;
+        private static readonly Vector2 RuntimeResearchButtonSize = new(398f, 46f);
+        private const float RuntimeResearchButtonTopOffset = -52f;
+        private const float RuntimeResearchButtonSpacing = 48f;
         private static readonly Vector2 GuardButtonPosition = new(0f, 0f);
         private static readonly Vector2 LastStandButtonPosition = new(168f, 0f);
         private static readonly Vector2 BurstButtonPosition = new(420f, 0f);
@@ -172,7 +174,12 @@ namespace IdleGame
         private readonly List<GameObject> runtimeResearchObjects = new();
         private readonly List<ResearchButtonBinding> researchButtonBindings = new();
         private GameManager gameManager;
+        private Button researchToggleButton;
+        private TMP_Text researchToggleButtonText;
+        private GameObject researchPanelObject;
         private TMP_Text researchPointsText;
+        private bool isResearchDrawerOpen;
+        private int visibleResearchPoints;
         private static readonly Color32 TravelTargetHighlightColor = new(255, 214, 102, 255);
 
 #if UNITY_EDITOR
@@ -272,6 +279,12 @@ namespace IdleGame
             }
 
             gameManager?.TryInvestResearch(researchId);
+        }
+
+        public void RequestToggleResearchDrawer()
+        {
+            isResearchDrawerOpen = !isResearchDrawerOpen;
+            ApplyResearchDrawerState();
         }
 
         private void OnEnable()
@@ -627,6 +640,11 @@ namespace IdleGame
                 travelButton.onClick.AddListener(RequestTravelToSelectedWave);
             }
 
+            if (researchToggleButton != null)
+            {
+                researchToggleButton.onClick.AddListener(RequestToggleResearchDrawer);
+            }
+
             RegisterResearchButtons();
         }
 
@@ -707,6 +725,11 @@ namespace IdleGame
             if (travelButton != null)
             {
                 travelButton.onClick.RemoveListener(RequestTravelToSelectedWave);
+            }
+
+            if (researchToggleButton != null)
+            {
+                researchToggleButton.onClick.RemoveListener(RequestToggleResearchDrawer);
             }
 
             UnregisterResearchButtons();
@@ -910,8 +933,9 @@ namespace IdleGame
 
         private void EnsureResearchPanel()
         {
-            if (researchPointsText != null)
+            if (researchToggleButton != null && researchPointsText != null)
             {
+                ApplyResearchDrawerState();
                 return;
             }
 
@@ -921,9 +945,17 @@ namespace IdleGame
                 return;
             }
 
+            if (researchToggleButton == null)
+            {
+                researchToggleButton = CreateResearchToggleButton(parent, "ResearchDrawerToggle", RuntimeResearchTogglePosition, "Research");
+                researchToggleButtonText = GetButtonLabel(researchToggleButton);
+                runtimeResearchObjects.Add(researchToggleButton.gameObject);
+            }
+
             var panelObject = new GameObject("RuntimeResearchPanel", typeof(RectTransform), typeof(Image));
             panelObject.transform.SetParent(parent, false);
             runtimeResearchObjects.Add(panelObject);
+            researchPanelObject = panelObject;
 
             var panelRect = panelObject.GetComponent<RectTransform>();
             ConfigureResearchPanelRect(panelRect);
@@ -952,6 +984,7 @@ namespace IdleGame
 
             TryAssignDefaultFont(researchPointsText);
 
+            ApplyResearchDrawerState();
             ownsRuntimeResearchControls = true;
         }
 
@@ -1054,6 +1087,9 @@ namespace IdleGame
 
         private void RefreshResearchPanel(GameSnapshot snapshot)
         {
+            visibleResearchPoints = snapshot.ResearchPoints;
+            ApplyResearchDrawerState();
+
             if (researchPointsText != null)
             {
                 researchPointsText.text = $"Research {snapshot.ResearchPoints} RP";
@@ -1062,6 +1098,20 @@ namespace IdleGame
             for (var i = 0; i < researchButtonBindings.Count && i < snapshot.Researches.Length; i++)
             {
                 RefreshResearchButton(snapshot.Researches[i], researchButtonBindings[i]);
+            }
+        }
+
+        private void ApplyResearchDrawerState()
+        {
+            if (researchPanelObject != null)
+            {
+                researchPanelObject.SetActive(isResearchDrawerOpen);
+            }
+
+            if (researchToggleButtonText != null)
+            {
+                var drawerStateText = isResearchDrawerOpen ? "Close" : "Open";
+                researchToggleButtonText.text = $"Research\n{visibleResearchPoints} RP | {drawerStateText}";
             }
         }
 
@@ -1075,7 +1125,7 @@ namespace IdleGame
             if (binding.Label != null)
             {
                 binding.Label.text = BuildResearchButtonText(entry);
-                binding.Label.fontSize = 17f;
+                binding.Label.fontSize = 14f;
                 binding.Label.alignment = TextAlignmentOptions.MidlineLeft;
                 binding.Label.enableWordWrapping = false;
                 binding.Label.richText = true;
@@ -1238,7 +1288,12 @@ namespace IdleGame
 
             runtimeResearchObjects.Clear();
             researchButtonBindings.Clear();
+            researchToggleButton = null;
+            researchToggleButtonText = null;
+            researchPanelObject = null;
             researchPointsText = null;
+            isResearchDrawerOpen = false;
+            visibleResearchPoints = 0;
             ownsRuntimeResearchControls = false;
         }
 
@@ -1535,11 +1590,51 @@ namespace IdleGame
 
             var label = labelObject.GetComponent<TextMeshProUGUI>();
             label.text = labelText;
-            label.fontSize = 17f;
+            label.fontSize = 14f;
             label.alignment = TextAlignmentOptions.MidlineLeft;
             label.enableWordWrapping = false;
             label.color = Color.white;
             label.richText = true;
+
+            TryAssignDefaultFont(label);
+
+            return button;
+        }
+
+        private static Button CreateResearchToggleButton(RectTransform parent, string name, Vector2 anchoredPosition, string labelText)
+        {
+            var buttonObject = new GameObject(name, typeof(RectTransform), typeof(Image), typeof(Button));
+            buttonObject.transform.SetParent(parent, false);
+
+            var rectTransform = buttonObject.GetComponent<RectTransform>();
+            rectTransform.anchorMin = RuntimeResearchDrawerAnchor;
+            rectTransform.anchorMax = RuntimeResearchDrawerAnchor;
+            rectTransform.pivot = RuntimeResearchDrawerPivot;
+            rectTransform.sizeDelta = RuntimeResearchToggleSize;
+            rectTransform.anchoredPosition = anchoredPosition;
+
+            var image = buttonObject.GetComponent<Image>();
+            image.color = new Color32(62, 76, 96, 225);
+
+            var button = buttonObject.GetComponent<Button>();
+            button.targetGraphic = image;
+
+            var labelObject = new GameObject("Label", typeof(RectTransform), typeof(TextMeshProUGUI));
+            labelObject.transform.SetParent(buttonObject.transform, false);
+
+            var labelRect = labelObject.GetComponent<RectTransform>();
+            labelRect.anchorMin = Vector2.zero;
+            labelRect.anchorMax = Vector2.one;
+            labelRect.offsetMin = new Vector2(10f, 5f);
+            labelRect.offsetMax = new Vector2(-10f, -5f);
+
+            var label = labelObject.GetComponent<TextMeshProUGUI>();
+            label.text = labelText;
+            label.fontSize = 17f;
+            label.alignment = TextAlignmentOptions.Center;
+            label.enableWordWrapping = false;
+            label.color = Color.white;
+            label.richText = false;
 
             TryAssignDefaultFont(label);
 
@@ -1626,11 +1721,11 @@ namespace IdleGame
                 return;
             }
 
-            rectTransform.anchorMin = RuntimeResearchPanelAnchor;
-            rectTransform.anchorMax = RuntimeResearchPanelAnchor;
-            rectTransform.pivot = RuntimeResearchPanelPivot;
-            rectTransform.anchoredPosition = RuntimeResearchPanelPosition;
-            rectTransform.sizeDelta = RuntimeResearchPanelSize;
+            rectTransform.anchorMin = RuntimeResearchDrawerAnchor;
+            rectTransform.anchorMax = RuntimeResearchDrawerAnchor;
+            rectTransform.pivot = RuntimeResearchDrawerPivot;
+            rectTransform.anchoredPosition = RuntimeResearchDrawerPosition;
+            rectTransform.sizeDelta = RuntimeResearchDrawerSize;
         }
 
         private static TMP_Text GetButtonLabel(Button button)
@@ -1787,7 +1882,7 @@ namespace IdleGame
                 : data.CanInvest
                     ? $"Invest {data.NextLevelCost} RP"
                     : $"Need {data.NextLevelCost} RP";
-            return $"[{data.Axis}] {data.DisplayName}  Lv.{data.Level}/{data.MaxLevel}\n{data.Description} | {actionText}";
+            return $"[{data.Axis}] {data.DisplayName}  Lv.{data.Level}/{data.MaxLevel}\n{actionText}";
         }
 
         private void EnsureUpgradeButtonLabels()
