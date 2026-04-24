@@ -8,11 +8,13 @@ namespace IdleGame
 {
     public sealed class UIBinder : MonoBehaviour
     {
-        private static readonly Vector2 EnemyReadoutPosition = new(-20f, -20f);
+        private const float RightColumnInset = 20f;
+        private const float RightColumnSpacing = 12f;
+        private static readonly Vector2 EnemyReadoutPosition = new(-RightColumnInset, -20f);
         private static readonly Vector2 WaveTravelPanelAnchor = new(1f, 1f);
         private static readonly Vector2 WaveTravelPanelPivot = new(1f, 1f);
         private static readonly Vector2 WaveTravelPanelSize = new(360f, 118f);
-        private static readonly Vector2 WaveTravelPanelPosition = new(-20f, -122f);
+        private static readonly Vector2 WaveTravelPanelPosition = new(-RightColumnInset, -122f);
         private static readonly Vector2 WaveTravelReadoutSize = new(360f, 52f);
         private static readonly Vector2 WaveTravelReadoutTopOffset = new(0f, -52f);
         private static readonly Vector2 EnemyReadoutSize = new(620f, 58f);
@@ -36,9 +38,13 @@ namespace IdleGame
         private static readonly Vector2 LastStandButtonSize = new(240f, 52f);
         private static readonly Vector2 RuntimeResearchDrawerAnchor = new(1f, 1f);
         private static readonly Vector2 RuntimeResearchDrawerPivot = new(1f, 1f);
-        private static readonly Vector2 RuntimeResearchDrawerPosition = new(-20f, -250f);
+        private static readonly Vector2 RuntimeResearchDrawerPosition = new(
+            -RightColumnInset,
+            WaveTravelPanelPosition.y - WaveTravelPanelSize.y - RuntimeResearchToggleSize.y - (RightColumnSpacing * 2f));
         private static readonly Vector2 RuntimeResearchDrawerSize = new(430f, 340f);
-        private static readonly Vector2 RuntimeResearchTogglePosition = new(-20f, -200f);
+        private static readonly Vector2 RuntimeResearchTogglePosition = new(
+            -RightColumnInset,
+            WaveTravelPanelPosition.y - WaveTravelPanelSize.y - RightColumnSpacing);
         private static readonly Vector2 RuntimeResearchToggleSize = new(180f, 44f);
         private static readonly Vector2 RuntimeResearchHeaderPosition = new(16f, -16f);
         private static readonly Vector2 RuntimeResearchHeaderSize = new(398f, 44f);
