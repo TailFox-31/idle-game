@@ -216,15 +216,15 @@
     },
     "com.unity.searcher": {
       "version": "4.9.4",
-      "depth": 2,
+      "depth": 1,
       "source": "registry",
       "dependencies": {},
       "url": "https://packages.unity.com"
     },
     "com.unity.shadergraph": {
-      "version": "17.4.0",
-      "depth": 1,
-      "source": "builtin",
+      "version": "file:com.unity.shadergraph",
+      "depth": 0,
+      "source": "embedded",
       "dependencies": {
         "com.unity.render-pipelines.core": "17.4.0",
         "com.unity.searcher": "4.9.3"
